@@ -1,6 +1,6 @@
 import express, { Router } from 'express';
 import { execSync } from 'child_process';
-import { prisma } from '../db';
+import { prisma } from '../services/database';
 
 const router: Router = express.Router();
 
