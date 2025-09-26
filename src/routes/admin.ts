@@ -13,6 +13,16 @@ router.post('/migrate-db-once', async (req, res) => {
     }
 
     console.log('Running database migrations...');
+
+    // First, mark any failed migrations as resolved
+    try {
+      const resolveOutput = execSync('npx prisma migrate resolve --applied "20250915165122_init"', { encoding: 'utf-8' });
+      console.log('Resolved old migration:', resolveOutput);
+    } catch (e) {
+      console.log('No migrations to resolve or already resolved');
+    }
+
+    // Now run the new migrations
     const output = execSync('npx prisma migrate deploy', { encoding: 'utf-8' });
     console.log('Migration output:', output);
 
