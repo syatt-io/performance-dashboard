@@ -22,8 +22,14 @@ service-account.json
 .next/
 out/
 build/
-dev.db
 *.tsbuildinfo
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+prisma/dev.db
+prisma/*.db
 
 # Runtime files
 *.log
