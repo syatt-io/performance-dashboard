@@ -1,0 +1,122 @@
+# DigitalOcean App Platform Configuration
+name: performance-dashboard
+services:
+  # Backend API Service
+  - name: api
+    source_dir: /
+    github:
+      repo: syatt-io/performance-dashboard
+      branch: main
+      deploy_on_push: true
+    build_command: npm run build
+    run_command: npm run start
+    environment_slug: node-js
+    instance_count: 1
+    instance_size_slug: basic-xxs  # Can scale up to professional-xs for heavy Lighthouse usage
+    http_port: 3000
+    routes:
+      - path: /api
+      - path: /health
+    envs:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3000"
+      - key: DATABASE_URL
+        type: SECRET
+        value: ${db.DATABASE_URL}  # Auto-injected from database component
+      - key: REDIS_URL
+        type: SECRET
+        value: ${redis.REDIS_URL}  # Auto-injected from Redis component
+      - key: ENCRYPTION_KEY
+        type: SECRET
+        value: YOUR_32_CHAR_ENCRYPTION_KEY_REPLACE_THIS
+      - key: PAGESPEED_API_KEY
+        type: SECRET
+        value: YOUR_PAGESPEED_API_KEY
+      - key: WEBPAGETEST_API_KEY
+        type: SECRET
+        value: YOUR_WEBPAGETEST_API_KEY
+      - key: ALLOWED_ORIGINS
+        value: ${_self.PUBLIC_URL}
+      - key: GOOGLE_APPLICATION_CREDENTIALS
+        value: /app/service-account.json
+
+  # Frontend Next.js Service
+  - name: frontend
+    source_dir: /
+    github:
+      repo: syatt-io/performance-dashboard
+      branch: main
+      deploy_on_push: true
+    build_command: npm run build:frontend
+    run_command: npm run start:frontend
+    environment_slug: node-js
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    http_port: 3001
+    routes:
+      - path: /
+    envs:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3001"
+      - key: NEXT_PUBLIC_API_URL
+        value: ${api.PUBLIC_URL}
+
+# Database Component
+databases:
+  - name: db
+    engine: PG
+    version: "15"
+    size: basic
+    num_nodes: 1
+
+# Redis Component (for Bull queues)
+services:
+  - name: redis
+    image:
+      registry_type: DOCR
+      registry: redis
+      repository: redis
+      tag: "7-alpine"
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    http_port: 6379
+    envs:
+      - key: REDIS_URL
+        value: redis://localhost:6379
+
+# Static Assets (if needed)
+static_sites:
+  - name: assets
+    source_dir: /public
+    github:
+      repo: syatt-io/performance-dashboard
+      branch: main
+      deploy_on_push: true
+    routes:
+      - path: /static
+
+# Jobs for background processing
+jobs:
+  - name: metrics-collector
+    source_dir: /
+    github:
+      repo: syatt-io/performance-dashboard
+      branch: main
+      deploy_on_push: true
+    run_command: npm run start:worker  # You'll need to create this script
+    environment_slug: node-js
+    instance_count: 1
+    instance_size_slug: basic-xs  # Slightly larger for Lighthouse operations
+    envs:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        type: SECRET
+        value: ${db.DATABASE_URL}
+      - key: REDIS_URL
+        type: SECRET
+        value: ${redis.REDIS_URL}
