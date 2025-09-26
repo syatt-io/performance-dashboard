@@ -118,11 +118,12 @@ export default function DateRangePicker({
                     id="startDate"
                     value={value.startDate || ''}
                     onChange={(e) => {
-                      handleCustomDateChange('startDate', e.target.value);
+                      const val = (e.target as HTMLInputElement).value;
+                      handleCustomDateChange('startDate', val);
                       onChange({
                         ...value,
                         timeRange: 'custom',
-                        startDate: e.target.value
+                        startDate: val
                       });
                     }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -137,11 +138,12 @@ export default function DateRangePicker({
                     id="endDate"
                     value={value.endDate || ''}
                     onChange={(e) => {
-                      handleCustomDateChange('endDate', e.target.value);
+                      const val = (e.target as HTMLInputElement).value;
+                      handleCustomDateChange('endDate', val);
                       onChange({
                         ...value,
                         timeRange: 'custom',
-                        endDate: e.target.value
+                        endDate: val
                       });
                     }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
