@@ -21,21 +21,12 @@
   "author": "",
   "license": "ISC",
   "description": "",
-  "devDependencies": {
-    "@types/bull": "^3.15.9",
+  "dependencies": {
+    "typescript": "^5.9.2",
     "@types/express": "^5.0.3",
     "@types/node": "^24.4.0",
-    "@typescript-eslint/eslint-plugin": "^8.43.0",
-    "@typescript-eslint/parser": "^8.43.0",
-    "concurrently": "^9.2.1",
-    "eslint": "^9.35.0",
-    "nodemon": "^3.1.10",
-    "prettier": "^3.6.2",
+    "@types/bull": "^3.15.9",
     "prisma": "^6.16.1",
-    "tsx": "^4.20.5",
-    "typescript": "^5.9.2"
-  },
-  "dependencies": {
     "@prisma/client": "^6.16.1",
     "@tailwindcss/typography": "^0.5.16",
     "@types/bcrypt": "^6.0.0",
@@ -63,5 +54,14 @@
     "react-dom": "^19.1.1",
     "recharts": "^3.2.0",
     "tailwindcss": "^3.4.17"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.43.0",
+    "@typescript-eslint/parser": "^8.43.0",
+    "concurrently": "^9.2.1",
+    "eslint": "^9.35.0",
+    "nodemon": "^3.1.10",
+    "prettier": "^3.6.2",
+    "tsx": "^4.20.5"
   }
 }
