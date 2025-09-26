@@ -1,0 +1,77 @@
+# Simplified App Platform Configuration
+# Single app with multiple services - much cleaner approach
+
+name: performance-dashboard
+
+services:
+  # Backend API Service
+  - name: api
+    source_dir: /
+    github:
+      repo: syatt-io/performance-dashboard
+      branch: main
+      deploy_on_push: true
+    build_command: npm ci && npm run build
+    run_command: npm run start
+    environment_slug: node-js
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    http_port: 3000
+    routes:
+      - path: /api
+      - path: /health
+    envs:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        type: SECRET
+        value: ${db.DATABASE_URL}
+      - key: REDIS_URL
+        type: SECRET
+        value: ${redis.REDIS_URL}
+      - key: ENCRYPTION_KEY
+        type: SECRET
+      - key: PAGESPEED_API_KEY
+        type: SECRET
+      - key: ALLOWED_ORIGINS
+        value: ${_self.PUBLIC_URL}
+
+  # Frontend Next.js Service
+  - name: frontend
+    source_dir: /
+    github:
+      repo: syatt-io/performance-dashboard
+      branch: main
+      deploy_on_push: true
+    build_command: npm ci && npm run build:frontend
+    run_command: npm run start:frontend
+    environment_slug: node-js
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    http_port: 3001
+    routes:
+      - path: /
+    envs:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        value: ${api.PUBLIC_URL}
+
+# Managed Database (auto-created)
+databases:
+  - name: db
+    engine: PG
+    version: "15"
+    size: basic
+    num_nodes: 1
+
+# Managed Redis (auto-created)
+services:
+  - name: redis
+    image:
+      registry_type: DOCKER_HUB
+      repository: redis
+      tag: "7-alpine"
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    http_port: 6379

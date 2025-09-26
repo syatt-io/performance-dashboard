@@ -23,11 +23,17 @@
     "allowJs": true,
     "noEmit": false,
     "incremental": true,
-    "isolatedModules": false,
-    "jsx": "preserve"
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    ".next/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

@@ -50,6 +50,10 @@ app.get('/health', (req, res) => {
 
 app.use('/api', routes);
 
+// Temporary admin routes for migration
+import adminRoutes from './routes/admin';
+app.use('/api/admin', adminRoutes);
+
 async function startServer() {
   await connectDatabase();
 

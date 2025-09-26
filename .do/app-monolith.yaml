@@ -1,0 +1,62 @@
+# Monolithic App Platform Configuration
+# Single service running both frontend and backend
+
+name: performance-dashboard
+
+services:
+  # Combined Frontend + Backend Service
+  - name: app
+    source_dir: /
+    github:
+      repo: syatt-io/performance-dashboard
+      branch: main
+      deploy_on_push: true
+    build_command: |
+      npm ci
+      npm run build
+      npm run build:frontend
+    run_command: |
+      npm run start:production
+    environment_slug: node-js
+    instance_count: 1
+    instance_size_slug: basic-xs  # Slightly larger for combined workload
+    http_port: 3000
+    routes:
+      - path: /
+    envs:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3000"
+      - key: FRONTEND_PORT
+        value: "3001"
+      - key: DATABASE_URL
+        type: SECRET
+        value: ${db.DATABASE_URL}
+      - key: REDIS_URL
+        type: SECRET
+        value: ${redis.REDIS_URL}
+      - key: ENCRYPTION_KEY
+        type: SECRET
+      - key: PAGESPEED_API_KEY
+        type: SECRET
+      - key: ALLOWED_ORIGINS
+        value: ${_self.PUBLIC_URL}
+
+# Managed Database
+databases:
+  - name: db
+    engine: PG
+    version: "15"
+    size: basic
+    num_nodes: 1
+
+# Managed Redis
+services:
+  - name: redis
+    image:
+      registry_type: DOCKER_HUB
+      repository: redis
+      tag: "7-alpine"
+    instance_count: 1
+    instance_size_slug: basic-xxs
