@@ -1,0 +1,32 @@
+node_modules/
+dist/
+.env
+.env.local
+.DS_Store
+*.log
+coverage/
+.nyc_output/
+.vscode/
+.idea/
+*.swp
+*.swo
+.cache/
+tmp/
+/src/generated/prisma
+
+# Google Service Account credentials
+service-account.json
+/service-account*.json
+
+# Build artifacts
+.next/
+out/
+build/
+dev.db
+*.tsbuildinfo
+
+# Runtime files
+*.log
+*.pid
+*.seed
+*.pid.lock
