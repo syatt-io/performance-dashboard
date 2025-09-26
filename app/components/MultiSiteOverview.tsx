@@ -18,7 +18,7 @@ interface MultiSiteOverviewProps {
   onSiteSelect: (site: Site) => void;
 }
 
-type SortField = 'name' | 'mobileScore' | 'desktopScore' | 'lcp' | 'cls' | 'fcp' | 'speedIndex' | 'lastUpdated';
+type SortField = 'name' | 'mobileScore' | 'desktopScore' | 'tbt' | 'lcp' | 'cls' | 'fcp' | 'speedIndex' | 'lastUpdated';
 type SortDirection = 'asc' | 'desc';
 
 export default function MultiSiteOverview({ sites, onSiteSelect }: MultiSiteOverviewProps) {
@@ -126,6 +126,18 @@ export default function MultiSiteOverview({ sites, onSiteSelect }: MultiSiteOver
     }
   };
 
+  const getTargetTooltip = (metric: string) => {
+    const targets = {
+      'performance': 'Target: ≥90/100 for good performance',
+      'lcp': 'Target: ≤2.48s for good performance',
+      'cls': 'Target: ≤0.10 for good performance',
+      'tbt': 'Target: ≤200ms for good performance',
+      'fcp': 'Target: ≤1.78s for good performance',
+      'speedIndex': 'Target: ≤3.39s for good performance'
+    };
+    return targets[metric] || '';
+  };
+
   const calculateOverallStats = () => {
     const validData = siteData.filter(item => item.summary && !item.error);
 
@@ -203,6 +215,10 @@ export default function MultiSiteOverview({ sites, onSiteSelect }: MultiSiteOver
         case 'desktopScore':
           aValue = a.summary?.performanceScore.desktop || 0;
           bValue = b.summary?.performanceScore.desktop || 0;
+          break;
+        case 'tbt':
+          aValue = a.summary?.coreWebVitals.tbt.value || 999;
+          bValue = b.summary?.coreWebVitals.tbt.value || 999;
           break;
         case 'lcp':
           aValue = a.summary?.coreWebVitals.lcp.value || 999;
@@ -403,6 +419,20 @@ export default function MultiSiteOverview({ sites, onSiteSelect }: MultiSiteOver
                     </div>
                   </div>
                 </th>
+                <th className="hidden lg:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none transition-colors"
+                    onClick={() => handleSort('tbt')}>
+                  <div className="flex items-center space-x-1">
+                    <span>TBT</span>
+                    <div className="flex flex-col">
+                      <ChevronUp
+                        className={`w-3 h-3 ${sortField === 'tbt' && sortDirection === 'asc' ? 'text-blue-600' : 'text-gray-300'}`}
+                      />
+                      <ChevronDown
+                        className={`w-3 h-3 -mt-1 ${sortField === 'tbt' && sortDirection === 'desc' ? 'text-blue-600' : 'text-gray-300'}`}
+                      />
+                    </div>
+                  </div>
+                </th>
                 <th className="hidden md:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none transition-colors"
                     onClick={() => handleSort('cls')}>
                   <div className="flex items-center space-x-1">
@@ -506,7 +536,10 @@ export default function MultiSiteOverview({ sites, onSiteSelect }: MultiSiteOver
                       <span className="text-red-500 text-sm">Error</span>
                     ) : (
                       <div className="flex items-center">
-                        <span className="text-sm font-medium">
+                        <span
+                          className="text-sm font-medium cursor-help"
+                          title={getTargetTooltip('performance')}
+                        >
                           {item.summary?.performanceScore.mobile || 'N/A'}
                         </span>
                         {item.summary?.performanceScore.mobile && (
@@ -532,7 +565,10 @@ export default function MultiSiteOverview({ sites, onSiteSelect }: MultiSiteOver
                       <span className="text-red-500 text-sm">Error</span>
                     ) : (
                       <div className="flex items-center">
-                        <span className="text-sm font-medium">
+                        <span
+                          className="text-sm font-medium cursor-help"
+                          title={getTargetTooltip('performance')}
+                        >
                           {item.summary?.performanceScore.desktop || 'N/A'}
                         </span>
                         {item.summary?.performanceScore.desktop && (
@@ -551,6 +587,29 @@ export default function MultiSiteOverview({ sites, onSiteSelect }: MultiSiteOver
                     )}
                   </td>
 
+                  {/* TBT */}
+                  <td className="hidden lg:table-cell px-3 sm:px-6 py-4 whitespace-nowrap">
+                    {item.loading ? (
+                      <div className="w-16 h-4 bg-gray-200 rounded animate-pulse"></div>
+                    ) : item.error ? (
+                      <span className="text-red-500 text-sm">-</span>
+                    ) : (
+                      <div>
+                        <span
+                          className="text-sm font-medium cursor-help"
+                          title={getTargetTooltip('tbt')}
+                        >
+                          {item.summary?.coreWebVitals.tbt.value?.toFixed(0) || 'N/A'}
+                          {item.summary?.coreWebVitals.tbt.value && 'ms'}
+                        </span>
+                        {item.summary?.coreWebVitals.tbt.status && (
+                          <div className={`text-xs ${getStatusColor(item.summary.coreWebVitals.tbt.status)}`}>
+                            {item.summary.coreWebVitals.tbt.status.replace('-', ' ')}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </td>
 
                   {/* CLS */}
                   <td className="hidden md:table-cell px-3 sm:px-6 py-4 whitespace-nowrap">
@@ -560,7 +619,10 @@ export default function MultiSiteOverview({ sites, onSiteSelect }: MultiSiteOver
                       <span className="text-red-500 text-sm">-</span>
                     ) : (
                       <div>
-                        <span className="text-sm font-medium">
+                        <span
+                          className="text-sm font-medium cursor-help"
+                          title={getTargetTooltip('cls')}
+                        >
                           {item.summary?.coreWebVitals.cls.value?.toFixed(3) || 'N/A'}
                         </span>
                         {item.summary?.coreWebVitals.cls.status && (
@@ -580,7 +642,10 @@ export default function MultiSiteOverview({ sites, onSiteSelect }: MultiSiteOver
                       <span className="text-red-500 text-sm">-</span>
                     ) : (
                       <div>
-                        <span className="text-sm font-medium">
+                        <span
+                          className="text-sm font-medium cursor-help"
+                          title={getTargetTooltip('lcp')}
+                        >
                           {item.summary?.coreWebVitals.lcp.value?.toFixed(2) || 'N/A'}
                           {item.summary?.coreWebVitals.lcp.value && 's'}
                         </span>
@@ -601,7 +666,10 @@ export default function MultiSiteOverview({ sites, onSiteSelect }: MultiSiteOver
                       <span className="text-red-500 text-sm">-</span>
                     ) : (
                       <div>
-                        <span className="text-sm font-medium text-gray-900">
+                        <span
+                          className="text-sm font-medium text-gray-900 cursor-help"
+                          title={getTargetTooltip('speedIndex')}
+                        >
                           {item.summary?.coreWebVitals.speedIndex?.value ?
                             `${item.summary.coreWebVitals.speedIndex.value.toFixed(1)}s` :
                             'N/A'
@@ -624,7 +692,10 @@ export default function MultiSiteOverview({ sites, onSiteSelect }: MultiSiteOver
                       <span className="text-red-500 text-sm">-</span>
                     ) : (
                       <div>
-                        <span className="text-sm font-medium text-gray-900">
+                        <span
+                          className="text-sm font-medium text-gray-900 cursor-help"
+                          title={getTargetTooltip('fcp')}
+                        >
                           {item.summary?.coreWebVitals.fcp?.value ?
                             `${item.summary.coreWebVitals.fcp.value.toFixed(1)}s` :
                             'N/A'
@@ -693,24 +764,6 @@ export default function MultiSiteOverview({ sites, onSiteSelect }: MultiSiteOver
         </div>
       </div>
 
-      {/* Quick Actions */}
-      {stats.needsAttention > 0 && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <AlertCircle className="w-5 h-5 text-yellow-400" />
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-yellow-800">
-                Action Required
-              </h3>
-              <div className="mt-2 text-sm text-yellow-700">
-                {stats.needsAttention} site(s) need attention. Sites with performance scores below 75 or active alerts should be reviewed.
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

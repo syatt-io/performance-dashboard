@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState, memo, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts';
 import { PerformanceMetric } from '../lib/api';
 import { Calendar, TrendingUp, TrendingDown, Minus } from 'lucide-react';
@@ -105,7 +105,7 @@ function getMetricThresholds(metric: string) {
   }
 }
 
-export default function MetricsChart({
+const MetricsChart = memo(function MetricsChart({
   metrics,
   metric,
   title,
@@ -121,41 +121,49 @@ export default function MetricsChart({
 }: MetricsChartProps) {
   const [selectedRange, setSelectedRange] = useState(dateRange);
 
-  // Process data for time-series visualization
-  const processedData = metrics
-    .filter(m => m[metric] !== null && m[metric] !== undefined)
-    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-    .map(m => ({
-      timestamp: m.timestamp,
-      formattedTime: formatTimestamp(m.timestamp, selectedRange.timeRange),
-      mobile: m.deviceType === 'mobile' ? m[metric] : null,
-      desktop: m.deviceType === 'desktop' ? m[metric] : null,
-      rawTimestamp: new Date(m.timestamp).getTime()
-    }));
+  // Process data for time-series visualization with memoization
+  const processedData = useMemo(() => {
+    return metrics
+      .filter(m => m[metric] !== null && m[metric] !== undefined)
+      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+      .map(m => ({
+        timestamp: m.timestamp,
+        formattedTime: formatTimestamp(m.timestamp, selectedRange.timeRange),
+        mobile: m.deviceType === 'mobile' ? m[metric] : null,
+        desktop: m.deviceType === 'desktop' ? m[metric] : null,
+        rawTimestamp: new Date(m.timestamp).getTime()
+      }));
+  }, [metrics, metric, selectedRange.timeRange]);
 
-  // Merge mobile and desktop data points by timestamp
-  const timeGroups = processedData.reduce((acc, curr) => {
-    const key = curr.formattedTime;
-    if (!acc[key]) {
-      acc[key] = {
-        timestamp: curr.formattedTime,
-        rawTimestamp: curr.rawTimestamp,
-        mobile: null,
-        desktop: null
-      };
-    }
-    if (curr.mobile !== null) acc[key].mobile = curr.mobile;
-    if (curr.desktop !== null) acc[key].desktop = curr.desktop;
-    return acc;
-  }, {} as Record<string, any>);
+  // Merge mobile and desktop data points by timestamp with memoization
+  const data = useMemo(() => {
+    const timeGroups = processedData.reduce((acc, curr) => {
+      const key = curr.formattedTime;
+      if (!acc[key]) {
+        acc[key] = {
+          timestamp: curr.formattedTime,
+          rawTimestamp: curr.rawTimestamp,
+          mobile: null,
+          desktop: null
+        };
+      }
+      if (curr.mobile !== null) acc[key].mobile = curr.mobile;
+      if (curr.desktop !== null) acc[key].desktop = curr.desktop;
+      return acc;
+    }, {} as Record<string, any>);
 
-  const data = Object.values(timeGroups).sort((a: any, b: any) => a.rawTimestamp - b.rawTimestamp);
+    return Object.values(timeGroups).sort((a: any, b: any) => a.rawTimestamp - b.rawTimestamp);
+  }, [processedData]);
 
-  // Calculate trend and statistics
-  const { trend, changePercent, average } = calculateMetricStats(data, metric);
+  // Calculate trend and statistics with memoization
+  const stats = useMemo(() => {
+    return calculateMetricStats(data, metric);
+  }, [data, metric]);
 
   // Get thresholds for reference lines
-  const thresholds = getMetricThresholds(metric);
+  const thresholds = useMemo(() => {
+    return getMetricThresholds(metric);
+  }, [metric]);
 
   const handleRangeChange = (range: {
     startDate: string | null;
@@ -184,17 +192,17 @@ export default function MetricsChart({
           <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
           {showTrend && data.length > 1 && (
             <div className="flex items-center mt-1 space-x-2">
-              <span className="text-sm text-gray-600">Avg: {average}{unit}</span>
+              <span className="text-sm text-gray-600">Avg: {stats.average}{unit}</span>
               <div className="flex items-center">
-                {trend === 'up' && <TrendingUp className="w-3 h-3 text-red-500" />}
-                {trend === 'down' && <TrendingDown className="w-3 h-3 text-green-500" />}
-                {trend === 'stable' && <Minus className="w-3 h-3 text-gray-500" />}
+                {stats.trend === 'up' && <TrendingUp className="w-3 h-3 text-red-500" />}
+                {stats.trend === 'down' && <TrendingDown className="w-3 h-3 text-green-500" />}
+                {stats.trend === 'stable' && <Minus className="w-3 h-3 text-gray-500" />}
                 <span className={`text-xs ml-1 ${
-                  trend === 'up' ? 'text-red-600' :
-                  trend === 'down' ? 'text-green-600' :
+                  stats.trend === 'up' ? 'text-red-600' :
+                  stats.trend === 'down' ? 'text-green-600' :
                   'text-gray-600'
                 }`}>
-                  {changePercent !== null ? `${changePercent > 0 ? '+' : ''}${changePercent.toFixed(1)}%` : ''}
+                  {stats.changePercent !== null ? `${stats.changePercent > 0 ? '+' : ''}${stats.changePercent.toFixed(1)}%` : ''}
                 </span>
               </div>
             </div>
@@ -300,4 +308,6 @@ export default function MetricsChart({
       )}
     </div>
   );
-}
+});
+
+export default MetricsChart;

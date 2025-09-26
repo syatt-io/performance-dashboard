@@ -1,0 +1,69 @@
+{
+  "sites": [
+    {
+      "name": "Worksite Safety",
+      "url": "https://worksitesafety.ca/",
+      "shopifyDomain": null
+    },
+    {
+      "name": "Tomlinson's",
+      "url": "https://tomlinsons.com/",
+      "shopifyDomain": null
+    },
+    {
+      "name": "Iris Windows",
+      "url": "https://www.iriswindows.com/",
+      "shopifyDomain": null
+    },
+    {
+      "name": "ECS Coffee",
+      "url": "https://ecscoffee.com/",
+      "shopifyDomain": null
+    },
+    {
+      "name": "BrightBean",
+      "url": "https://brightbean.com/",
+      "shopifyDomain": null
+    },
+    {
+      "name": "Beauchamp",
+      "url": "https://galeriebeauchamp.com",
+      "shopifyDomain": null
+    },
+    {
+      "name": "Envy & Grace",
+      "url": "https://www.envyandgrace.ca/",
+      "shopifyDomain": null
+    },
+    {
+      "name": "Pseudio",
+      "url": "https://www.pseudio.ca/",
+      "shopifyDomain": null
+    },
+    {
+      "name": "Turkstra",
+      "url": "https://turkstralumber.com/",
+      "shopifyDomain": null
+    },
+    {
+      "name": "Bigelow",
+      "url": "https://bigelowchemists.com",
+      "shopifyDomain": null
+    },
+    {
+      "name": "University Co-op",
+      "url": "https://www.universitycoop.com/",
+      "shopifyDomain": null
+    },
+    {
+      "name": "Snuggle Bugz",
+      "url": "https://snugglebugz.ca/",
+      "shopifyDomain": null
+    }
+  ],
+  "metadata": {
+    "exported": "2025-09-16",
+    "totalSites": 12,
+    "note": "Backup of all performance dashboard sites"
+  }
+}

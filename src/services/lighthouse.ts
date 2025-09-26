@@ -4,6 +4,7 @@ import { shopifyMetricsCollector } from './shopifyMetrics';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { GoogleAuth } from 'google-auth-library';
+import { decryptCredentials } from '../utils/encryption';
 
 const execAsync = promisify(exec);
 
@@ -21,6 +22,7 @@ export interface LighthouseResult {
   fcp?: number;
   ttfb?: number;
   speedIndex?: number;
+  tbt?: number;
   performanceScore?: number;
   imageOptimizationScore?: number;
   themeAssetSize?: number;
@@ -207,6 +209,7 @@ export class PerformanceCollector {
       const fcp = audits['first-contentful-paint']?.numericValue ? audits['first-contentful-paint'].numericValue / 1000 : undefined;
       const ttfb = audits['server-response-time']?.numericValue || undefined;
       const speedIndex = audits['speed-index']?.numericValue ? audits['speed-index'].numericValue / 1000 : undefined;
+      const tbt = audits['total-blocking-time']?.numericValue || undefined;
       const performanceScore = lhr.categories?.performance?.score ? Math.round(lhr.categories.performance.score * 100) : undefined;
 
       // Validate critical metrics
@@ -260,6 +263,7 @@ export class PerformanceCollector {
         fcp,
         ttfb,
         speedIndex,
+        tbt,
         performanceScore,
         imageOptimizationScore,
         themeAssetSize: themeAssets.totalByteWeight,
@@ -268,7 +272,7 @@ export class PerformanceCollector {
           url,
           deviceType: config.deviceType,
           timestamp: new Date().toISOString(),
-          rawReport: lhr,
+          testProvider: 'lighthouse-local',
           imageOptimization,
           themeAssets,
           thirdPartyImpact,
@@ -667,6 +671,7 @@ export class PerformanceCollector {
             ? lighthouse.audits['first-contentful-paint'].numericValue / 1000 : undefined;
           const speedIndex = lighthouse?.audits?.['speed-index']?.numericValue
             ? lighthouse.audits['speed-index'].numericValue / 1000 : undefined;
+          const tbt = lighthouse?.audits?.['total-blocking-time']?.numericValue || undefined;
           const performanceScore = lighthouse?.categories?.performance?.score
             ? Math.round(lighthouse.categories.performance.score * 100) : undefined;
 
@@ -732,6 +737,7 @@ export class PerformanceCollector {
             fcp,
             ttfb,
             speedIndex,
+            tbt,
             performanceScore,
             imageOptimizationScore,
             themeAssetSize: themeAssets.totalByteWeight,
@@ -750,13 +756,11 @@ export class PerformanceCollector {
               testId,
               userUrl,
               location: config.location || 'ec2-us-east-1:Chrome',
-              rawWebPageTestData: resultsData.data,
-              rawLighthouseData: lighthouse,
               imageOptimization,
               themeAssets,
               thirdPartyImpact,
               visualProgress,
-              note: 'WebPageTest data with embedded Lighthouse results'
+              note: 'WebPageTest data with embedded Lighthouse results (raw data removed to save space)'
             }
           };
         } else if (resultsData.statusCode === 101) {
@@ -929,6 +933,10 @@ export class PerformanceCollector {
 
       // Speed Index - only available in lab data (convert ms to seconds)
       const speedIndex = audits['speed-index']?.numericValue ? audits['speed-index'].numericValue / 1000 : undefined;
+
+      // Total Blocking Time - only available in lab data
+      const tbt = audits['total-blocking-time']?.numericValue || undefined;
+
       const performanceScore = lighthouseResult.categories?.performance?.score ? Math.round(lighthouseResult.categories.performance.score * 100) : undefined;
 
       // Extract Shopify-specific image optimization metrics
@@ -993,6 +1001,7 @@ export class PerformanceCollector {
         fcp,
         ttfb,
         speedIndex,
+        tbt,
         performanceScore,
         // New Shopify-specific metrics
         imageOptimizationScore,
@@ -1003,13 +1012,10 @@ export class PerformanceCollector {
           deviceType: config.deviceType,
           timestamp: new Date().toISOString(),
           testProvider: 'pagespeed',
-          rawReport: lighthouseResult,
-          loadingExperience: data.loadingExperience,
-          originLoadingExperience: data.originLoadingExperience,
           imageOptimization,
           themeAssets,
           thirdPartyImpact,
-          note: 'Real PageSpeed Insights data with Shopify-specific metrics'
+          note: 'Real PageSpeed Insights data with Shopify-specific metrics (raw report removed to save space)'
         }
       };
 
@@ -1100,6 +1106,7 @@ export class PerformanceCollector {
           fcp: metrics.fcp,
           ttfb: metrics.ttfb,
           speedIndex: metrics.speedIndex,
+          tbt: metrics.tbt,
           performanceScore: metrics.performanceScore,
           // Shopify-specific metrics
           imageOptimizationScore: metrics.imageOptimizationScore,
@@ -1146,7 +1153,8 @@ export class PerformanceCollector {
         fid: metrics.fid,
         fcp: metrics.fcp,
         ttfb: metrics.ttfb,
-        speedIndex: metrics.speedIndex
+        speedIndex: metrics.speedIndex,
+        tbt: metrics.tbt
       });
 
       console.log(`✅ [${config.deviceType.toUpperCase()}] Alert processing complete for ${url}`);
@@ -1260,8 +1268,11 @@ export class PerformanceCollector {
 
     // First check database configuration
     if (site.apiKey) {
+      // Decrypt credentials before use
+      const { apiKey } = decryptCredentials({ apiKey: site.apiKey });
+
       try {
-        const config = JSON.parse(site.apiKey);
+        const config = JSON.parse(apiKey || '');
         isShopifyStore = config.isShopify === true;
       } catch {
         // Not a JSON config, check if URL contains shopify indicators

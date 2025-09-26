@@ -1,5 +1,6 @@
 'use client';
 
+import React, { memo, useCallback } from 'react';
 import { Site } from '../lib/api';
 import { Globe, Activity, AlertCircle, Trash2, Edit } from 'lucide-react';
 
@@ -10,36 +11,40 @@ interface SiteCardProps {
   onEdit?: (site: Site) => void;
 }
 
-export default function SiteCard({ site, onSelect, onDelete, onEdit }: SiteCardProps) {
-  const getStatusColor = () => {
+const SiteCard = memo(function SiteCard({ site, onSelect, onDelete, onEdit }: SiteCardProps) {
+  const getStatusColor = useCallback(() => {
     if (!site.isActive) return 'bg-gray-100 border-gray-300';
     if (site._count?.alerts && site._count.alerts > 0) return 'bg-red-50 border-red-300';
     return 'bg-green-50 border-green-300';
-  };
+  }, [site.isActive, site._count?.alerts]);
 
-  const getStatusIcon = () => {
+  const getStatusIcon = useCallback(() => {
     if (!site.isActive) return <div className="w-2 h-2 bg-gray-400 rounded-full" />;
     if (site._count?.alerts && site._count.alerts > 0) {
       return <AlertCircle className="w-4 h-4 text-red-500" />;
     }
     return <div className="w-2 h-2 bg-green-500 rounded-full" />;
-  };
+  }, [site.isActive, site._count?.alerts]);
 
-  const handleEdit = (e: React.MouseEvent) => {
+  const handleEdit = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     onEdit?.(site);
-  };
+  }, [onEdit, site]);
 
-  const handleDelete = (e: React.MouseEvent) => {
+  const handleDelete = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     onDelete?.(site);
-  };
+  }, [onDelete, site]);
+
+  const handleSelect = useCallback(() => {
+    onSelect(site);
+  }, [onSelect, site]);
 
   return (
     <div className={`p-6 rounded-lg border-2 transition-all hover:shadow-md ${getStatusColor()}`}>
       <div
         className="cursor-pointer"
-        onClick={() => onSelect(site)}
+        onClick={handleSelect}
       >
       <div className="flex items-start justify-between">
         <div className="flex items-start space-x-3">
@@ -109,4 +114,6 @@ export default function SiteCard({ site, onSelect, onDelete, onEdit }: SiteCardP
       )}
     </div>
   );
-}
+});
+
+export default SiteCard;

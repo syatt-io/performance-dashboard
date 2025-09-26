@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { prisma } from '../services/database';
+import { encryptCredentials, decryptCredentials } from '../utils/encryption';
+import { validateSiteCreation, validateSiteUpdate, validateUuidParam } from '../middleware/validation';
 
 const router = Router();
 
@@ -18,9 +20,15 @@ router.get('/', async (req: Request, res: Response) => {
       }
     });
 
+    // Remove sensitive fields from response
+    const sanitizedSites = sites.map(site => {
+      const { apiKey, accessToken, ...safeSite } = site;
+      return safeSite;
+    });
+
     res.json({
-      sites,
-      total: sites.length
+      sites: sanitizedSites,
+      total: sanitizedSites.length
     });
   } catch (error) {
     console.error('Error fetching sites:', error);
@@ -28,7 +36,7 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', validateSiteCreation, async (req: Request, res: Response) => {
   try {
     const { name, url, shopifyDomain, apiKey, accessToken } = req.body;
 
@@ -43,17 +51,23 @@ router.post('/', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid URL format' });
     }
 
+    // Encrypt sensitive credentials before storing
+    const encryptedCredentials = encryptCredentials({ apiKey, accessToken });
+
     const site = await prisma.site.create({
       data: {
         name,
         url,
         shopifyDomain,
-        apiKey, // Note: In production, these should be encrypted
-        accessToken, // Note: In production, these should be encrypted
+        apiKey: encryptedCredentials.apiKey,
+        accessToken: encryptedCredentials.accessToken,
       }
     });
 
-    res.status(201).json(site);
+    // Remove sensitive fields from response
+    const { apiKey: _, accessToken: __, ...safeSite } = site;
+
+    res.status(201).json(safeSite);
   } catch (error: any) {
     console.error('Error creating site:', error);
     if (error.code === 'P2002') {
@@ -63,7 +77,7 @@ router.post('/', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/:id', async (req: Request, res: Response) => {
+router.get('/:id', validateUuidParam('id'), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -83,14 +97,16 @@ router.get('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Site not found' });
     }
 
-    res.json(site);
+    // Remove sensitive fields from response
+    const { apiKey, accessToken, ...safeSite } = site;
+    res.json(safeSite);
   } catch (error) {
     console.error('Error fetching site:', error);
     res.status(500).json({ error: 'Failed to fetch site' });
   }
 });
 
-router.put('/:id', async (req: Request, res: Response) => {
+router.put('/:id', validateUuidParam('id'), validateSiteUpdate, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { name, url, shopifyDomain, isActive } = req.body;
@@ -115,7 +131,7 @@ router.put('/:id', async (req: Request, res: Response) => {
   }
 });
 
-router.delete('/:id', async (req: Request, res: Response) => {
+router.delete('/:id', validateUuidParam('id'), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 

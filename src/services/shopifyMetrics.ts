@@ -1,5 +1,6 @@
 import { prisma } from './database';
 import { performanceCollector } from './lighthouse';
+import { decryptCredentials } from '../utils/encryption';
 
 export interface ShopifyPageMetrics {
   url: string;
@@ -276,9 +277,12 @@ export class ShopifyMetricsCollector {
 
     // If the site has specific collection/product URLs stored, use those
     if (site.apiKey) {
+      // Decrypt credentials before use
+      const { apiKey } = decryptCredentials({ apiKey: site.apiKey });
+
       // apiKey field could store JSON with specific URLs to monitor
       try {
-        const config = JSON.parse(site.apiKey);
+        const config = JSON.parse(apiKey || '');
         if (config.collections) {
           config.collections.forEach((collection: any) => {
             criticalPages.push({
