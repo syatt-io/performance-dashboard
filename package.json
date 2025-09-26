@@ -8,7 +8,7 @@
     "dev:both": "concurrently \"npm run dev\" \"npm run dev:frontend\"",
     "build": "prisma generate && tsc --skipLibCheck || true",
     "build:frontend": "next build",
-    "start": "prisma migrate deploy && node dist/index.js",
+    "start": "node dist/index.js",
     "start:frontend": "next start -p 3001",
     "lint": "eslint . --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
