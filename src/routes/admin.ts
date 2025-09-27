@@ -123,4 +123,46 @@ router.post('/migrate-db-once', async (req, res) => {
   }
 });
 
+// Check database tables
+router.get('/check-tables', async (req, res) => {
+  try {
+    // Check for secret key
+    const secretKey = req.headers['x-migration-key'];
+    if (secretKey !== 'temp-migration-key-2024') {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    console.log('Checking database tables...');
+
+    // Get all tables
+    const tables = await prisma.$queryRawUnsafe(`
+      SELECT table_name
+      FROM information_schema.tables
+      WHERE table_schema = 'public'
+      ORDER BY table_name
+    `);
+
+    // Test sites table
+    let sitesTest = null;
+    try {
+      const count = await prisma.$queryRawUnsafe(`SELECT COUNT(*) as count FROM sites`);
+      sitesTest = { success: true, count };
+    } catch (e: any) {
+      sitesTest = { success: false, error: e.message };
+    }
+
+    res.json({
+      tables,
+      sitesTest,
+      message: 'Database check complete'
+    });
+  } catch (error: any) {
+    console.error('Database check error:', error.message);
+    res.status(500).json({
+      error: 'Database check failed',
+      details: error.message
+    });
+  }
+});
+
 export default router;
