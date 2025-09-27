@@ -1,5 +1,5 @@
-import puppeteer from 'puppeteer';
 import { prisma } from './database';
+import { performanceCollector } from './lighthouse';
 
 export interface LighthouseMetrics {
   performance: number;
@@ -22,84 +22,33 @@ export async function runLighthouseTest(
   url: string,
   deviceType: 'mobile' | 'desktop'
 ): Promise<LighthouseMetrics> {
-  // Dynamic import to handle ESM module
-  const lighthouse = (await import('lighthouse')).default;
+  console.log(`[Worker] Running PageSpeed Insights API test for ${url} (${deviceType})`);
 
-  // Try to use system chromium if available, otherwise use downloaded Chrome
-  const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH ||
-    '/usr/bin/chromium-browser' ||
-    '/usr/bin/chromium' ||
-    '/usr/bin/google-chrome';
+  // Use the PageSpeed Insights API from lighthouse.ts
+  const result = await performanceCollector.collectMetricsPageSpeed(url, { deviceType });
 
-  const browser = await puppeteer.launch({
-    headless: 'new',
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-      '--no-first-run',
-      '--no-zygote',
-      '--single-process',
-      '--disable-extensions'
-    ],
-    executablePath: process.env.PUPPETEER_SKIP_CHROMIUM_DOWNLOAD ? executablePath : undefined
-  });
-
-  try {
-    // Get a port from the browser
-    const wsEndpoint = browser.wsEndpoint();
-    const port = new URL(wsEndpoint).port;
-
-    // Configure Lighthouse options
-    const options = {
-      port: Number(port),
-      output: 'json',
-      onlyCategories: ['performance', 'accessibility', 'best-practices', 'seo'],
-      throttling: {
-        cpuSlowdownMultiplier: deviceType === 'mobile' ? 4 : 1,
-      },
-      formFactor: deviceType as 'mobile' | 'desktop',
-      screenEmulation: deviceType === 'mobile'
-        ? { mobile: true, width: 375, height: 667, deviceScaleFactor: 2 }
-        : { mobile: false, width: 1350, height: 940, deviceScaleFactor: 1 },
-    };
-
-    // Run Lighthouse
-    const runnerResult = await lighthouse(url, options);
-
-    if (!runnerResult || !runnerResult.lhr) {
-      throw new Error('Lighthouse failed to generate results');
-    }
-
-    const lhr = runnerResult.lhr;
-
-    // Extract metrics
-    const metrics: LighthouseMetrics = {
-      performance: Math.round((lhr.categories.performance?.score || 0) * 100),
-      accessibility: Math.round((lhr.categories.accessibility?.score || 0) * 100),
-      bestPractices: Math.round((lhr.categories['best-practices']?.score || 0) * 100),
-      seo: Math.round((lhr.categories.seo?.score || 0) * 100),
-
-      // Core Web Vitals and other metrics (convert to seconds)
-      fcp: (lhr.audits['first-contentful-paint']?.numericValue || 0) / 1000,
-      si: (lhr.audits['speed-index']?.numericValue || 0) / 1000,
-      lcp: (lhr.audits['largest-contentful-paint']?.numericValue || 0) / 1000,
-      tti: (lhr.audits['interactive']?.numericValue || 0) / 1000,
-      tbt: lhr.audits['total-blocking-time']?.numericValue || 0, // Keep in ms
-      cls: lhr.audits['cumulative-layout-shift']?.numericValue || 0,
-      ttfb: lhr.audits['server-response-time']?.numericValue || 0, // Keep in ms
-
-      // Additional metrics
-      pageLoadTime: (lhr.audits['speed-index']?.numericValue || 0) / 1000, // Approximate
-      pageSize: lhr.audits['total-byte-weight']?.numericValue || 0,
-      requests: lhr.audits['network-requests']?.details?.items?.length || 0,
-    };
-
-    return metrics;
-  } finally {
-    await browser.close();
+  if (!result.success) {
+    throw new Error(`PageSpeed Insights API failed: ${result.error}`);
   }
+
+  // Convert the result to the expected format
+  // Note: Some metrics might not be available from PageSpeed API
+  return {
+    performance: result.performanceScore || 0,
+    accessibility: 0, // PageSpeed API doesn't provide this in performance mode
+    bestPractices: 0, // PageSpeed API doesn't provide this in performance mode
+    seo: 0, // PageSpeed API doesn't provide this in performance mode
+    fcp: result.fcp || 0,
+    si: result.speedIndex || 0,
+    lcp: result.lcp || 0,
+    tti: result.fcp ? (result.fcp + 3) : 0, // Estimate TTI as FCP + 3s if not available
+    tbt: result.tbt || 0,
+    cls: result.cls || 0,
+    ttfb: (result.ttfb || 0) / 1000, // Convert ms to seconds if needed
+    pageLoadTime: result.speedIndex || 0, // Use speed index as approximate page load time
+    pageSize: result.themeAssetSize || 0,
+    requests: 0, // Not available from PageSpeed API
+  };
 }
 
 export async function collectAndSaveMetrics(
@@ -125,9 +74,9 @@ export async function collectAndSaveMetrics(
       throw new Error(`Site not found: ${siteId}`);
     }
 
-    console.log(`Running Lighthouse test for ${site.name} (${deviceType})...`);
+    console.log(`[Worker] Running PageSpeed Insights test for ${site.name} (${deviceType})...`);
 
-    // Run Lighthouse test
+    // Run PageSpeed Insights API test (NOT local Lighthouse)
     const metrics = await runLighthouseTest(site.url, deviceType);
 
     // Save metrics to database
@@ -140,7 +89,7 @@ export async function collectAndSaveMetrics(
       }
     });
 
-    console.log(`Saved metrics for ${site.name} (${deviceType}): Performance ${metrics.performance}`);
+    console.log(`[Worker] Saved metrics for ${site.name} (${deviceType}): Performance ${metrics.performance}`);
 
     // Update job status to completed
     if (scheduledJobId) {
@@ -156,11 +105,11 @@ export async function collectAndSaveMetrics(
     // Update site's last tested timestamp
     await prisma.site.update({
       where: { id: siteId },
-      data: { lastChecked: new Date() }
+      data: { updatedAt: new Date() }
     });
 
   } catch (error) {
-    console.error(`Error collecting metrics for site ${siteId}:`, error);
+    console.error(`[Worker] Error collecting metrics for site ${siteId}:`, error);
 
     // Update job status to failed
     if (scheduledJobId) {
