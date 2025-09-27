@@ -831,4 +831,81 @@ router.post('/cleanup-stuck-jobs', async (req: Request, res: Response) => {
   }
 });
 
+// Collect metrics for all sites
+router.post('/collect-all', async (req: Request, res: Response) => {
+  try {
+    console.log('🚀 Starting batch collection for all sites...');
+
+    // Get all active sites
+    const sites = await prisma.site.findMany({
+      where: { monitoringEnabled: true }
+    });
+
+    if (sites.length === 0) {
+      return res.json({
+        message: 'No active sites found',
+        totalSites: 0,
+        startedJobs: 0
+      });
+    }
+
+    // Create collection jobs for each site
+    const jobs = [];
+    for (const site of sites) {
+      try {
+        // Check if there's already a running job for this site
+        const existingJob = await prisma.scheduledJob.findFirst({
+          where: {
+            siteId: site.id,
+            status: 'running'
+          }
+        });
+
+        if (existingJob) {
+          console.log(`⏭️ Skipping ${site.name} - already has running job`);
+          continue;
+        }
+
+        // Create mobile and desktop jobs
+        for (const deviceType of ['mobile', 'desktop']) {
+          const job = await prisma.scheduledJob.create({
+            data: {
+              siteId: site.id,
+              jobType: 'lighthouse',
+              status: 'pending',
+              scheduledFor: new Date()
+            }
+          });
+          jobs.push({ ...job, siteName: site.name, deviceType });
+          console.log(`✅ Created ${deviceType} job for ${site.name}`);
+        }
+      } catch (error) {
+        console.error(`❌ Failed to create job for ${site.name}:`, error);
+      }
+    }
+
+    console.log(`📊 Created ${jobs.length} collection jobs for ${sites.length} sites`);
+
+    // Note: Actual collection would be handled by a background service
+    // This just creates the jobs in the database
+
+    res.json({
+      message: `Started performance testing for ${sites.length} sites`,
+      totalSites: sites.length,
+      startedJobs: jobs.length,
+      sites: sites.map(s => ({ id: s.id, name: s.name })),
+      jobs: jobs.map(j => ({
+        id: j.id,
+        siteId: j.siteId,
+        siteName: j.siteName,
+        deviceType: j.deviceType
+      }))
+    });
+
+  } catch (error) {
+    console.error('Error in batch collection:', error);
+    res.status(500).json({ error: 'Failed to start batch collection' });
+  }
+});
+
 export default router;
