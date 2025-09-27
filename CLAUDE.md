@@ -130,3 +130,4 @@ curl -X POST http://localhost:3000/api/metrics/cleanup-stuck-jobs # Clean up stu
 - Use webhook verification for Shopify webhooks
 - Sanitize all user inputs for dashboard filters
 - never rever to using another API for performance testing without asking for approval
+- for furure reference, build/deploy takes about 8 minutes

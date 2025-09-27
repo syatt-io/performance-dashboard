@@ -54,9 +54,6 @@ COPY --from=build --chown=nextjs:nodejs /app/package*.json ./
 # Create config directory for service account
 RUN mkdir -p /app/config && chown nextjs:nodejs /app/config
 
-# Copy service account file if it exists
-COPY --chown=nextjs:nodejs service-account.json /app/config/service-account.json
-
 # Create log directory
 RUN mkdir -p /var/log/performance-dashboard && chown nextjs:nodejs /var/log/performance-dashboard
 
