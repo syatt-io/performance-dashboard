@@ -63,19 +63,20 @@ router.get('/sites/:siteId', async (req: Request, res: Response) => {
         timestamp: true,
         deviceType: true,
         lcp: true,
-        fid: true,
         cls: true,
         tbt: true,
-        inp: true,
         fcp: true,
         ttfb: true,
-        speedIndex: true,
-        performanceScore: true,
-        // Shopify-specific metrics
-        imageOptimizationScore: true,
-        themeAssetSize: true,
-        thirdPartyBlockingTime: true,
-        location: true
+        si: true, // Speed Index
+        tti: true,
+        performance: true,
+        accessibility: true,
+        bestPractices: true,
+        seo: true,
+        pageLoadTime: true,
+        pageSize: true,
+        requests: true,
+        testLocation: true
       }
     });
 
@@ -97,7 +98,7 @@ router.post('/sites/:siteId/collect', async (req: Request, res: Response) => {
   try {
     console.log(`📡 Collection endpoint called for site: ${req.params.siteId}`);
     const { siteId } = req.params;
-    const { deviceType } = req.body;
+    const { deviceType = 'mobile' } = req.body || {};
 
     // Verify site exists
     const site = await prisma.site.findUnique({
@@ -108,12 +109,12 @@ router.post('/sites/:siteId/collect', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Site not found' });
     }
 
-    if (!site.isActive) {
-      return res.status(400).json({ error: 'Site is not active' });
+    if (!site.monitoringEnabled) {
+      return res.status(400).json({ error: 'Site monitoring is disabled' });
     }
 
     // Check for existing running jobs
-    const existingJob = await prisma.monitoringJob.findFirst({
+    const existingJob = await prisma.scheduledJob.findFirst({
       where: {
         siteId,
         status: 'running'
@@ -125,7 +126,7 @@ router.post('/sites/:siteId/collect', async (req: Request, res: Response) => {
         error: 'Collection already in progress',
         jobId: existingJob.id,
         status: existingJob.status,
-        startedAt: existingJob.startedAt
+        startedAt: existingJob.startedAt || existingJob.scheduledFor
       });
     }
 
@@ -136,14 +137,12 @@ router.post('/sites/:siteId/collect', async (req: Request, res: Response) => {
       : ['mobile', 'desktop'];
 
     for (const device of deviceTypes) {
-      const job = await prisma.monitoringJob.create({
+      const job = await prisma.scheduledJob.create({
         data: {
           siteId,
           jobType: 'lighthouse',
           status: 'pending',
-          deviceType: device,
-          scheduledAt: new Date(),
-          config: { deviceType: device }
+          scheduledFor: new Date()
         }
       });
       jobs.push(job);
@@ -155,10 +154,10 @@ router.post('/sites/:siteId/collect', async (req: Request, res: Response) => {
     setImmediate(async () => {
       for (const job of jobs) {
         try {
-          console.log(`🚀 Starting background collection for site ${siteId} - ${site.name} (${job.deviceType})`);
+          console.log(`🚀 Starting background collection for site ${siteId} - ${site.name}`);
 
           // Update job status to running
-          await prisma.monitoringJob.update({
+          await prisma.scheduledJob.update({
             where: { id: job.id },
             data: {
               status: 'running',
@@ -166,10 +165,10 @@ router.post('/sites/:siteId/collect', async (req: Request, res: Response) => {
             }
           });
 
-          await performanceCollector.collectAndStore(siteId, site.url, { deviceType: job.deviceType });
+          await performanceCollector.collectAndStore(siteId, site.url, { deviceType: device });
 
           // Update job status to completed
-          await prisma.monitoringJob.update({
+          await prisma.scheduledJob.update({
             where: { id: job.id },
             data: {
               status: 'completed',
@@ -177,17 +176,17 @@ router.post('/sites/:siteId/collect', async (req: Request, res: Response) => {
             }
           });
 
-          console.log(`✅ Background collection completed for site ${siteId} (${job.deviceType})`);
+          console.log(`✅ Background collection completed for site ${siteId} (${device})`);
         } catch (error) {
-          console.error(`❌ Background collection failed for ${siteId} (${job.deviceType}):`, error);
+          console.error(`❌ Background collection failed for ${siteId} (${device}):`, error);
 
           // Update job status to failed
-          await prisma.monitoringJob.update({
+          await prisma.scheduledJob.update({
             where: { id: job.id },
             data: {
               status: 'failed',
               completedAt: new Date(),
-              errorMessage: error instanceof Error ? error.message : 'Unknown error'
+              error: error instanceof Error ? error.message : 'Unknown error'
             }
           });
         }
@@ -199,7 +198,7 @@ router.post('/sites/:siteId/collect', async (req: Request, res: Response) => {
       jobId,
       siteId,
       url: site.url,
-      jobs: jobs.map(j => ({ id: j.id, deviceType: j.deviceType, status: j.status }))
+      jobs: jobs.map(j => ({ id: j.id, status: j.status }))
     });
   } catch (error) {
     console.error('Error starting collection:', error);
@@ -274,20 +273,11 @@ router.get('/sites/:siteId/summary', async (req: Request, res: Response) => {
     const latestMobile = mobileMetrics[0];
     const latestDesktop = desktopMetrics[0];
 
-    // Get alert counts
-    const alertCounts = await prisma.alert.groupBy({
-      by: ['type'],
-      where: {
-        siteId,
-        isResolved: false
-      },
-      _count: { type: true }
-    });
-
+    // Alerts not implemented yet - returning empty counts
     const alerts = {
-      critical: alertCounts.find(a => a.type === 'critical')?._count.type || 0,
-      warning: alertCounts.find(a => a.type === 'warning')?._count.type || 0,
-      info: alertCounts.find(a => a.type === 'info')?._count.type || 0
+      critical: 0,
+      warning: 0,
+      info: 0
     };
 
     const summary = {
@@ -302,8 +292,8 @@ router.get('/sites/:siteId/summary', async (req: Request, res: Response) => {
           trend: 'stable' // TODO: Calculate actual trend
         },
         fid: {
-          value: latestMobile?.fid || null,
-          status: calculateStatus(latestMobile?.fid || null, { good: 100, poor: 300 }),
+          value: null, // FID not tracked - using INP instead
+          status: 'unknown',
           trend: 'stable'
         },
         cls: {
@@ -322,14 +312,14 @@ router.get('/sites/:siteId/summary', async (req: Request, res: Response) => {
           trend: 'stable'
         },
         speedIndex: {
-          value: latestMobile?.speedIndex || null,
-          status: calculateStatus(latestMobile?.speedIndex || null, { good: 3.4, poor: 5.8 }),
+          value: latestMobile?.si || null, // Using si field for Speed Index
+          status: calculateStatus(latestMobile?.si || null, { good: 3.4, poor: 5.8 }),
           trend: 'stable'
         }
       },
       performanceScore: {
-        mobile: latestMobile?.performanceScore || null,
-        desktop: latestDesktop?.performanceScore || null
+        mobile: latestMobile?.performance || null,
+        desktop: latestDesktop?.performance || null
       },
       alerts,
       metricsCount: latestMetrics.length
@@ -572,7 +562,7 @@ router.post('/collect-all', async (req: Request, res: Response) => {
 
     // Get all active sites
     const sites = await prisma.site.findMany({
-      where: { isActive: true }
+      where: { monitoringEnabled: true }
     });
 
     if (sites.length === 0) {
@@ -684,20 +674,20 @@ router.get('/job-status', async (req: Request, res: Response) => {
 
     // Get all sites with their current running/pending jobs
     const sites = await prisma.site.findMany({
-      where: { isActive: true },
+      where: { monitoringEnabled: true },
       include: {
-        monitoringJobs: {
+        scheduledJobs: {
           where: {
             status: { in: ['pending', 'running'] }
           },
-          orderBy: { scheduledAt: 'desc' }
+          orderBy: { scheduledFor: 'desc' }
         }
       },
       orderBy: { name: 'asc' }
     });
 
     const jobStatuses = sites.map(site => {
-      const jobs = site.monitoringJobs;
+      const jobs = site.scheduledJobs;
 
       // Determine overall site testing status
       let status = 'idle';
@@ -729,7 +719,7 @@ router.get('/job-status', async (req: Request, res: Response) => {
           id: job.id,
           deviceType: job.deviceType,
           status: job.status,
-          scheduledAt: job.scheduledAt,
+          scheduledFor: job.scheduledFor,
           startedAt: job.startedAt
         }));
       }
@@ -769,7 +759,7 @@ router.post('/cleanup-stuck-jobs', async (req: Request, res: Response) => {
     const pendingTimeThreshold = new Date(Date.now() - 30 * 60 * 1000); // 30 minutes ago
 
     // Find stuck running jobs
-    const stuckRunningJobs = await prisma.monitoringJob.findMany({
+    const stuckRunningJobs = await prisma.scheduledJob.findMany({
       where: {
         status: 'running',
         startedAt: {
@@ -782,10 +772,10 @@ router.post('/cleanup-stuck-jobs', async (req: Request, res: Response) => {
     });
 
     // Find stuck pending jobs
-    const stuckPendingJobs = await prisma.monitoringJob.findMany({
+    const stuckPendingJobs = await prisma.scheduledJob.findMany({
       where: {
         status: 'pending',
-        scheduledAt: {
+        scheduledFor: {
           lte: pendingTimeThreshold
         }
       },
@@ -805,11 +795,11 @@ router.post('/cleanup-stuck-jobs', async (req: Request, res: Response) => {
 
     console.log(`Found ${allStuckJobs.length} stuck jobs to clean up:`);
     allStuckJobs.forEach(job => {
-      console.log(`- Job ${job.id} (${job.deviceType}) for ${job.site.name}: ${job.status} since ${job.startedAt || job.scheduledAt}`);
+      console.log(`- Job ${job.id} for ${job.site.name}: ${job.status} since ${job.startedAt || job.scheduledFor}`);
     });
 
     // Mark all stuck jobs as failed
-    const cleanupResult = await prisma.monitoringJob.updateMany({
+    const cleanupResult = await prisma.scheduledJob.updateMany({
       where: {
         id: { in: allStuckJobs.map(job => job.id) }
       },
@@ -831,7 +821,7 @@ router.post('/cleanup-stuck-jobs', async (req: Request, res: Response) => {
         siteName: job.site.name,
         deviceType: job.deviceType,
         originalStatus: job.status,
-        stuckSince: job.startedAt || job.scheduledAt
+        stuckSince: job.startedAt || job.scheduledFor
       }))
     });
 
