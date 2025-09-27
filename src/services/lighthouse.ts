@@ -44,6 +44,22 @@ export class PerformanceCollector {
 
   private async getGoogleAccessToken(): Promise<string | null> {
     try {
+      // Check if service account is provided via base64 environment variable
+      if (process.env.GOOGLE_SERVICE_ACCOUNT_BASE64) {
+        console.log('🔐 Using Google Service Account from environment variable');
+
+        const fs = require('fs');
+        const path = require('path');
+        const serviceAccountPath = '/tmp/service-account.json';
+
+        // Decode and write service account to temp file
+        const serviceAccountJson = Buffer.from(process.env.GOOGLE_SERVICE_ACCOUNT_BASE64, 'base64').toString('utf-8');
+        fs.writeFileSync(serviceAccountPath, serviceAccountJson);
+        process.env.GOOGLE_APPLICATION_CREDENTIALS = serviceAccountPath;
+
+        console.log('✅ Service account decoded and saved to temp file');
+      }
+
       // Check if service account credentials are available
       if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
         console.log('📝 No service account credentials found, checking for API key...');
@@ -834,19 +850,22 @@ export class PerformanceCollector {
       // Initialize headers for potential authentication
       let headers: HeadersInit = {};
 
-      // Use API key if available, fall back to service account
-      const apiKey = process.env.PAGESPEED_API_KEY;
+      // Use service account for authentication (25k requests/day limit)
       const accessToken = await this.getGoogleAccessToken();
 
-      if (apiKey) {
-        console.log('🔑 Using API Key authentication (recommended for PageSpeed API)');
-        params.append('key', apiKey);
-      } else if (accessToken) {
-        console.log('🔑 Using Service Account (Bearer token) authentication');
+      if (accessToken) {
+        console.log('🔑 Using Service Account (Bearer token) authentication - 25k requests/day');
         console.log(`🎯 Service account token prefix: ${accessToken.substring(0, 20)}...`);
         headers['Authorization'] = `Bearer ${accessToken}`;
       } else {
-        console.log('📝 Using free tier (no authentication) - limited to 25-100 requests/day');
+        // Fall back to API key if no service account
+        const apiKey = process.env.PAGESPEED_API_KEY;
+        if (apiKey) {
+          console.log('🔑 Using API Key authentication (fallback)');
+          params.append('key', apiKey);
+        } else {
+          console.log('📝 Using free tier (no authentication) - limited to 25-100 requests/day');
+        }
       }
 
       const apiUrl = `${baseUrl}?${params.toString()}`;
