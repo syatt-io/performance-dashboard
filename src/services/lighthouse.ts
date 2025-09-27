@@ -82,7 +82,7 @@ export class PerformanceCollector {
 
       const auth = new GoogleAuth({
         keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
-        scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+        scopes: ['openid'],
       });
 
       console.log('🔄 Getting auth client...');
