@@ -13,18 +13,14 @@ router.get('/', async (req: Request, res: Response) => {
       include: {
         _count: {
           select: {
-            metrics: true,
-            alerts: { where: { isResolved: false } }
+            metrics: true
           }
         }
       }
     });
 
-    // Remove sensitive fields from response
-    const sanitizedSites = sites.map(site => {
-      const { apiKey, accessToken, ...safeSite } = site;
-      return safeSite;
-    });
+    // Sites are already safe (no sensitive fields in current schema)
+    const sanitizedSites = sites;
 
     res.json({
       sites: sanitizedSites,
@@ -38,7 +34,7 @@ router.get('/', async (req: Request, res: Response) => {
 
 router.post('/', validateSiteCreation, async (req: Request, res: Response) => {
   try {
-    const { name, url, shopifyDomain, apiKey, accessToken } = req.body;
+    const { name, url, monitoringEnabled = true, checkFrequency = 360 } = req.body;
 
     if (!name || !url) {
       return res.status(400).json({ error: 'Name and URL are required' });
@@ -51,21 +47,17 @@ router.post('/', validateSiteCreation, async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid URL format' });
     }
 
-    // Encrypt sensitive credentials before storing
-    const encryptedCredentials = encryptCredentials({ apiKey, accessToken });
-
     const site = await prisma.site.create({
       data: {
         name,
         url,
-        shopifyDomain,
-        apiKey: encryptedCredentials.apiKey,
-        accessToken: encryptedCredentials.accessToken,
+        monitoringEnabled,
+        checkFrequency
       }
     });
 
-    // Remove sensitive fields from response
-    const { apiKey: _, accessToken: __, ...safeSite } = site;
+    // Return the created site
+    const safeSite = site;
 
     res.status(201).json(safeSite);
   } catch (error: any) {
