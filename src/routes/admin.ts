@@ -165,4 +165,68 @@ router.get('/check-tables', async (req, res) => {
   }
 });
 
+// Add sample metrics endpoint - TEMPORARY
+router.post('/add-sample-metrics', async (req, res) => {
+  try {
+    // Check for secret key
+    const secretKey = req.headers['x-migration-key'];
+    if (secretKey !== 'temp-migration-key-2024') {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    const { siteId, metrics } = req.body;
+
+    if (!siteId || !metrics || !Array.isArray(metrics)) {
+      return res.status(400).json({ error: 'Invalid request body' });
+    }
+
+    console.log(`Adding ${metrics.length} sample metrics for site ${siteId}...`);
+
+    // Insert metrics
+    const results = [];
+    for (const metric of metrics) {
+      try {
+        const result = await prisma.performanceMetric.create({
+          data: {
+            siteId,
+            timestamp: metric.timestamp ? new Date(metric.timestamp) : new Date(),
+            deviceType: metric.deviceType || 'mobile',
+            performance: metric.performance || null,
+            accessibility: metric.accessibility || null,
+            bestPractices: metric.bestPractices || null,
+            seo: metric.seo || null,
+            fcp: metric.fcp || null,
+            si: metric.si || null,
+            lcp: metric.lcp || null,
+            tbt: metric.tbt || null,
+            cls: metric.cls || null,
+            tti: metric.tti || null,
+            ttfb: metric.ttfb || null,
+            pageLoadTime: metric.pageLoadTime || null,
+            pageSize: metric.pageSize || null,
+            requests: metric.requests || null,
+            testLocation: metric.testLocation || null
+          }
+        });
+        results.push({ success: true, id: result.id });
+      } catch (error: any) {
+        console.error('Failed to insert metric:', error.message);
+        results.push({ success: false, error: error.message });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Added ${results.filter(r => r.success).length} of ${metrics.length} metrics`,
+      results
+    });
+  } catch (error: any) {
+    console.error('Add sample metrics error:', error.message);
+    res.status(500).json({
+      error: 'Failed to add sample metrics',
+      details: error.message
+    });
+  }
+});
+
 export default router;
