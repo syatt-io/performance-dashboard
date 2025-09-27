@@ -145,8 +145,8 @@ router.get('/check-tables', async (req, res) => {
     // Test sites table
     let sitesTest = null;
     try {
-      const count = await prisma.$queryRawUnsafe(`SELECT COUNT(*) as count FROM sites`);
-      sitesTest = { success: true, count };
+      const count: any = await prisma.$queryRawUnsafe(`SELECT COUNT(*) as count FROM sites`);
+      sitesTest = { success: true, count: Number(count[0]?.count || 0) };
     } catch (e: any) {
       sitesTest = { success: false, error: e.message };
     }
