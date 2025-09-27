@@ -9,135 +9,82 @@ datasource db {
 }
 
 model Site {
-  id            String   @id @default(uuid())
-  name          String
-  url           String   @unique
-  shopifyDomain String?
-  apiKey        String?  // Shopify API credentials (encrypted)
-  accessToken   String?  // Shopify access token (encrypted)
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                String   @id @default(uuid())
+  name              String
+  url               String   @unique
+  monitoringEnabled Boolean  @default(true)
+  checkFrequency    Int      @default(360)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
-  metrics PerformanceMetric[]
-  alerts  Alert[]
-  budgets PerformanceBudget[]
-  monitoringJobs MonitoringJob[]
+  metrics       PerformanceMetric[]
+  scheduledJobs ScheduledJob[]
 
   @@map("sites")
 }
 
 model PerformanceMetric {
-  id         String   @id @default(uuid())
-  siteId     String
-  timestamp  DateTime @default(now())
-  deviceType String   // 'mobile' | 'desktop'
+  id            String   @id @default(uuid())
+  siteId        String
+  timestamp     DateTime @default(now())
+  testLocation  String?
+  deviceType    String   @default("mobile")
+
+  // Lighthouse scores
+  performance   Int?
+  accessibility Int?
+  bestPractices Int?
+  seo           Int?
 
   // Core Web Vitals
-  lcp            Float?  // Largest Contentful Paint (seconds)
-  fid            Float?  // First Input Delay (milliseconds)
-  cls            Float?  // Cumulative Layout Shift
-  inp            Float?  // Interaction to Next Paint (milliseconds)
-  fcp            Float?  // First Contentful Paint (seconds)
-  tbt            Float?  // Total Blocking Time (milliseconds)
-  ttfb           Float?  // Time to First Byte (milliseconds)
-  speedIndex     Float?  // Speed Index
-  performanceScore Int?  // Lighthouse performance score (0-100)
+  fcp           Float? // First Contentful Paint (seconds)
+  si            Float? // Speed Index (seconds)
+  lcp           Float? // Largest Contentful Paint (seconds)
+  tbt           Float? // Total Blocking Time (milliseconds)
+  cls           Float? // Cumulative Layout Shift
+  tti           Float? // Time to Interactive (seconds)
+  ttfb          Float? // Time to First Byte (milliseconds)
 
-  // Shopify-specific metrics
-  cartResponseTime       Float?  // Add to cart response time (milliseconds)
-  checkoutStepTime       Float?  // Checkout step completion time (milliseconds)
-  themeAssetSize         Int?    // Total theme asset size (bytes)
-  liquidRenderTime       Float?  // Liquid template render time (milliseconds)
-  imageOptimizationScore Int?    // Image optimization score (0-100)
-  thirdPartyBlockingTime Float?  // Third-party script blocking time (milliseconds)
+  // Page metrics
+  pageLoadTime  Float?
+  pageSize      Int?
+  requests      Int?
 
-  // Raw Lighthouse data (JSON)
-  lighthouseData Json?
-
-  // WebPageTest-specific metrics
-  visualProgress      Json?   // Visual progress data (filmstrip)
-  loadTime           Float?  // Full load time (seconds)
-  fullyLoadedTime    Float?  // Time until fully loaded (seconds)
-  bytesIn            Int?    // Total bytes downloaded
-  requests           Int?    // Number of HTTP requests
-  testProvider       String? // 'pagespeed' | 'webpagetest' | 'lighthouse'
-  testId             String? // External test ID for reference
-
-  // Additional metadata
-  userAgent     String?
-  connectionType String?
-  location      String?  // Geographic location of test
+  errorDetails  String?
 
   site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
-  @@index([siteId, timestamp])
-  @@index([timestamp])
+  @@index([siteId, timestamp(sort: Desc)])
   @@map("performance_metrics")
 }
 
-model Alert {
+model ScheduledJob {
   id           String    @id @default(uuid())
   siteId       String
-  type         String    // 'critical' | 'warning' | 'info'
-  metric       String    // Which metric triggered the alert
-  threshold    Float     // The threshold that was exceeded
-  currentValue Float     // The actual value that triggered the alert
-  message      String    // Human-readable alert message
-  isResolved   Boolean   @default(false)
+  jobType      String
+  status       String    @default("pending")
+  scheduledFor DateTime
+  startedAt    DateTime?
+  completedAt  DateTime?
+  error        String?
+  retryCount   Int       @default(0)
   createdAt    DateTime  @default(now())
-  resolvedAt   DateTime?
+  updatedAt    DateTime  @updatedAt
 
   site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
-  @@index([siteId, isResolved])
-  @@index([createdAt])
-  @@map("alerts")
+  @@index([siteId, status])
+  @@index([scheduledFor])
+  @@map("scheduled_jobs")
 }
 
-model MonitoringJob {
-  id          String   @id @default(uuid())
-  siteId      String
-  jobType     String   // 'lighthouse' | 'rum_collection' | 'shopify_metrics'
-  status      String   // 'pending' | 'running' | 'completed' | 'failed'
-  deviceType  String?  // 'mobile' | 'desktop'
-  scheduledAt DateTime
-  startedAt   DateTime?
-  completedAt DateTime?
-  errorMessage String?
-
-  // Job configuration
-  config Json?
-
-  // Results reference (optional)
-  metricId String?
-
-  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
-
-  @@index([status, scheduledAt])
-  @@index([siteId, jobType])
-  @@map("monitoring_jobs")
-}
-
-model PerformanceBudget {
-  id          String   @id @default(uuid())
-  siteId      String
-  metric      String   // 'performanceScore' | 'lcp' | 'cls' | 'fid' | 'fcp' | 'ttfb' | 'speedIndex'
-  deviceType  String   // 'mobile' | 'desktop' | 'both'
-
-  // Thresholds
-  warningThreshold  Float   // Warning level
-  criticalThreshold Float   // Critical level
-
-  // Alerting configuration
-  isEnabled         Boolean @default(true)
-  alertOnRegression Boolean @default(false) // Alert when metric gets worse over time
-
+model ApiKey {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  name      String
+  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
-
-  @@unique([siteId, metric, deviceType])
-  @@map("performance_budgets")
+  @@map("api_keys")
 }
