@@ -1,12 +1,27 @@
 import Bull from 'bull';
 import { prisma } from './database';
 
-// Create queues for different job types
-export const performanceQueue = new Bull('performance-metrics', {
-  redis: process.env.REDIS_URL || {
+// Parse Redis connection options
+function getRedisConfig() {
+  if (process.env.REDIS_URL) {
+    // Bull can accept a Redis URL directly as a string
+    // But we need to ensure it's in the right format
+    console.log('[Queue] Using REDIS_URL for connection');
+    return process.env.REDIS_URL;
+  }
+
+  // Fallback to host/port for local development
+  const config = {
     host: process.env.REDIS_HOST || 'localhost',
     port: parseInt(process.env.REDIS_PORT || '6379'),
-  },
+  };
+  console.log(`[Queue] Using Redis host:port connection: ${config.host}:${config.port}`);
+  return config;
+}
+
+// Create queues for different job types
+export const performanceQueue = new Bull('performance-metrics', {
+  redis: getRedisConfig(),
   defaultJobOptions: {
     removeOnComplete: true,
     removeOnFail: false,
@@ -16,6 +31,15 @@ export const performanceQueue = new Bull('performance-metrics', {
       delay: 2000,
     },
   },
+});
+
+// Test Redis connection on startup
+performanceQueue.on('error', (error) => {
+  console.error('[Queue] Redis connection error:', error.message);
+});
+
+performanceQueue.on('ready', () => {
+  console.log('[Queue] Redis connection established successfully');
 });
 
 // Job types
@@ -44,15 +68,20 @@ export async function addPerformanceJob(data: PerformanceJobData, options?: Bull
 
 // Schedule all sites for testing
 export async function scheduleAllSites() {
+  console.log('[Queue] Fetching sites with monitoring enabled...');
   const sites = await prisma.site.findMany({
     where: { monitoringEnabled: true }
   });
+
+  console.log(`[Queue] Found ${sites.length} sites to schedule`);
 
   const jobs = [];
 
   for (const site of sites) {
     // Create scheduled jobs in database
     for (const deviceType of ['mobile', 'desktop'] as const) {
+      console.log(`[Queue] Creating scheduled job for ${site.name} (${deviceType})`);
+
       const scheduledJob = await prisma.scheduledJob.create({
         data: {
           siteId: site.id,
@@ -61,6 +90,8 @@ export async function scheduleAllSites() {
           scheduledFor: new Date(),
         }
       });
+
+      console.log(`[Queue] Adding job to queue for ${site.name} (${deviceType})`);
 
       // Add to queue
       const job = await addPerformanceJob({
@@ -73,6 +104,7 @@ export async function scheduleAllSites() {
     }
   }
 
+  console.log(`[Queue] Successfully scheduled ${jobs.length} jobs`);
   return jobs;
 }
 
