@@ -59,9 +59,8 @@ workers:
       branch: main
       deploy_on_push: true
     source_dir: /
-    build_command: npm ci && npm run build
-    run_command: PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true npm run start:worker
-    environment_slug: node-js
+    dockerfile_path: Dockerfile
+    run_command: npm run start:worker
     instance_count: 1
     instance_size_slug: basic-xs
     envs:
