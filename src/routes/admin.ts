@@ -110,8 +110,7 @@ router.post('/migrate-db-once', async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Migrations completed successfully',
-      output: output
+      message: 'Database tables created successfully'
     });
   } catch (error: any) {
     console.error('Migration error:', error.message);
