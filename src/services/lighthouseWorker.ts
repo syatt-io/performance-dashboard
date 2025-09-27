@@ -25,9 +25,25 @@ export async function runLighthouseTest(
   // Dynamic import to handle ESM module
   const lighthouse = (await import('lighthouse')).default;
 
+  // Try to use system chromium if available, otherwise use downloaded Chrome
+  const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH ||
+    '/usr/bin/chromium-browser' ||
+    '/usr/bin/chromium' ||
+    '/usr/bin/google-chrome';
+
   const browser = await puppeteer.launch({
     headless: 'new',
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--no-first-run',
+      '--no-zygote',
+      '--single-process',
+      '--disable-extensions'
+    ],
+    executablePath: process.env.PUPPETEER_SKIP_CHROMIUM_DOWNLOAD ? executablePath : undefined
   });
 
   try {
