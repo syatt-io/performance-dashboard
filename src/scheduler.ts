@@ -28,33 +28,13 @@ export function startScheduler() {
       const jobs = await scheduleAllSites();
       console.log(`[Scheduler] Scheduled ${jobs.length} performance tests`);
 
-      // Log to database for tracking
-      await prisma.scheduledJob.create({
-        data: {
-          jobType: 'scheduler_run',
-          status: 'completed',
-          metadata: {
-            jobsScheduled: jobs.length,
-            cleanedJobs,
-            timestamp: new Date().toISOString()
-          },
-          completedAt: new Date(),
-          scheduledFor: new Date()
-        }
-      });
+      // Log to console for tracking
+      console.log(`[Scheduler] Completed nightly run - ${jobs.length} jobs scheduled, ${cleanedJobs} stuck jobs cleaned`);
     } catch (error) {
       console.error('[Scheduler] Error in nightly job:', error);
 
-      // Log error to database
-      await prisma.scheduledJob.create({
-        data: {
-          jobType: 'scheduler_run',
-          status: 'failed',
-          error: error instanceof Error ? error.message : 'Unknown error',
-          completedAt: new Date(),
-          scheduledFor: new Date()
-        }
-      });
+      // Log error to console
+      console.error(`[Scheduler] Failed nightly run:`, error instanceof Error ? error.message : 'Unknown error');
     }
   });
 

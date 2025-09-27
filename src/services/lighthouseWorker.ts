@@ -132,8 +132,7 @@ export async function collectAndSaveMetrics(
         where: { id: scheduledJobId },
         data: {
           status: 'completed',
-          completedAt: new Date(),
-          metadata: { metricId: savedMetric.id }
+          completedAt: new Date()
         }
       });
     }

@@ -34,8 +34,7 @@ export async function addPerformanceJob(data: PerformanceJobData, options?: Bull
     await prisma.scheduledJob.update({
       where: { id: data.scheduledJobId },
       data: {
-        status: 'queued',
-        metadata: { bullJobId: job.id }
+        status: 'queued'
       }
     });
   }

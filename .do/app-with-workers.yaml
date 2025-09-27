@@ -1,0 +1,116 @@
+name: performance-dashboard
+region: tor
+services:
+  # Main app service (API + Frontend)
+  - name: app
+    github:
+      repo: syatt-io/performance-dashboard
+      branch: main
+      deploy_on_push: true
+    source_dir: /
+    build_command: npm ci && npm run build && npm run build:frontend
+    run_command: npm run start
+    environment_slug: node-js
+    instance_count: 1
+    instance_size_slug: basic-xs
+    http_port: 3000
+    envs:
+      - key: NODE_ENV
+        value: production
+        scope: RUN_AND_BUILD_TIME
+      - key: PORT
+        value: "3000"
+        scope: RUN_AND_BUILD_TIME
+      - key: DATABASE_URL
+        type: SECRET
+        scope: RUN_AND_BUILD_TIME
+        value: ${db.DATABASE_URL}
+      - key: REDIS_URL
+        type: SECRET
+        scope: RUN_AND_BUILD_TIME
+        value: redis://${redis.HOSTNAME}:${redis.PORT}
+      - key: ENCRYPTION_KEY
+        type: SECRET
+        scope: RUN_AND_BUILD_TIME
+        value: YOUR_32_CHAR_ENCRYPTION_KEY_HERE
+      - key: ALLOWED_ORIGINS
+        value: ${_self.PUBLIC_URL}
+        scope: RUN_AND_BUILD_TIME
+
+  # Redis service for Bull queues
+  - name: redis
+    image:
+      registry_type: DOCKER_HUB
+      registry: library
+      repository: redis
+      tag: "7-alpine"
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    internal_ports:
+      - 6379
+
+workers:
+  # Background worker for processing jobs
+  - name: worker
+    github:
+      repo: syatt-io/performance-dashboard
+      branch: main
+      deploy_on_push: true
+    source_dir: /
+    build_command: npm ci && npm run build
+    run_command: npm run start:worker
+    environment_slug: node-js
+    instance_count: 1
+    instance_size_slug: basic-xs
+    envs:
+      - key: NODE_ENV
+        value: production
+        scope: RUN_AND_BUILD_TIME
+      - key: DATABASE_URL
+        type: SECRET
+        scope: RUN_AND_BUILD_TIME
+        value: ${db.DATABASE_URL}
+      - key: REDIS_URL
+        type: SECRET
+        scope: RUN_AND_BUILD_TIME
+        value: redis://${redis.HOSTNAME}:${redis.PORT}
+
+  # Scheduler for cron jobs
+  - name: scheduler
+    github:
+      repo: syatt-io/performance-dashboard
+      branch: main
+      deploy_on_push: true
+    source_dir: /
+    build_command: npm ci && npm run build
+    run_command: npm run start:scheduler
+    environment_slug: node-js
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    envs:
+      - key: NODE_ENV
+        value: production
+        scope: RUN_AND_BUILD_TIME
+      - key: DATABASE_URL
+        type: SECRET
+        scope: RUN_AND_BUILD_TIME
+        value: ${db.DATABASE_URL}
+      - key: REDIS_URL
+        type: SECRET
+        scope: RUN_AND_BUILD_TIME
+        value: redis://${redis.HOSTNAME}:${redis.PORT}
+
+databases:
+  - name: db
+    engine: PG
+    version: "15"
+    size: basic
+    num_nodes: 1
+
+ingress:
+  rules:
+    - component:
+        name: app
+      match:
+        path:
+          prefix: /
