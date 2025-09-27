@@ -2,6 +2,8 @@ import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { prisma } from '../services/database';
 import { performanceCollector } from '../services/lighthouse';
+import { scheduleAllSites, addPerformanceJob, cleanStuckJobs } from '../services/queue';
+import { triggerManualRun } from '../scheduler';
 
 const router = Router();
 
@@ -550,83 +552,6 @@ router.get('/comparison', async (req: Request, res: Response) => {
   }
 });
 
-// Collect metrics for all active sites
-router.post('/collect-all', async (req: Request, res: Response) => {
-  try {
-    console.log('🚀 Starting metrics collection for all active sites');
-
-    // Get batch size and concurrency from query params or use defaults
-    const { batchSize = 2, delayMs = 5000 } = req.query;
-    const maxConcurrent = parseInt(batchSize as string);
-    const delay = parseInt(delayMs as string);
-
-    // Get all active sites
-    const sites = await prisma.site.findMany({
-      where: { monitoringEnabled: true }
-    });
-
-    if (sites.length === 0) {
-      return res.json({
-        message: 'No active sites found',
-        totalSites: 0,
-        startedJobs: 0
-      });
-    }
-
-    console.log(`📊 Found ${sites.length} active sites to process`);
-    console.log(`⚙️ Processing with batch size: ${maxConcurrent}, delay: ${delay}ms`);
-
-    // Process sites in batches to prevent system overload
-    const processBatch = async (batch: typeof sites) => {
-      const promises = batch.map(async (site) => {
-        try {
-          console.log(`🎯 Starting collection for site: ${site.name} (${site.url})`);
-          await performanceCollector.collectForSite(site.id);
-          console.log(`✅ Collection completed for site: ${site.name}`);
-          return { site: site.name, success: true };
-        } catch (error) {
-          console.error(`❌ Collection failed for site ${site.name}:`, error);
-          return { site: site.name, success: false, error: error.message };
-        }
-      });
-      return Promise.all(promises);
-    };
-
-    // Start processing in background with controlled concurrency
-    setImmediate(async () => {
-      const results = [];
-      for (let i = 0; i < sites.length; i += maxConcurrent) {
-        const batch = sites.slice(i, i + maxConcurrent);
-        console.log(`📦 Processing batch ${Math.floor(i/maxConcurrent) + 1} of ${Math.ceil(sites.length/maxConcurrent)} (${batch.length} sites)`);
-
-        const batchResults = await processBatch(batch);
-        results.push(...batchResults);
-
-        // Add delay between batches if not the last batch
-        if (i + maxConcurrent < sites.length) {
-          console.log(`⏱️ Waiting ${delay}ms before next batch...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-        }
-      }
-
-      const successCount = results.filter(r => r.success).length;
-      const failCount = results.filter(r => !r.success).length;
-      console.log(`🎉 All site collections completed. Success: ${successCount}, Failed: ${failCount}`);
-    });
-
-    res.json({
-      message: `Performance collection started for ${sites.length} active sites with controlled concurrency`,
-      totalSites: sites.length,
-      batchSize: maxConcurrent,
-      delayBetweenBatches: delay,
-      estimatedTime: `${Math.ceil(sites.length / maxConcurrent) * (delay/1000 + 60)} seconds`
-    });
-
-  } catch (error) {
-    console.error('Error starting collection for all sites:', error);
-    res.status(500).json({ error: 'Failed to start metrics collection for all sites' });
-  }
-});
 
 // Test endpoint for local Lighthouse
 router.post('/test-lighthouse-local', async (req: Request, res: Response) => {
@@ -831,80 +756,39 @@ router.post('/cleanup-stuck-jobs', async (req: Request, res: Response) => {
   }
 });
 
-// Collect metrics for all sites
+// Collect metrics for all sites using queue system
 router.post('/collect-all', async (req: Request, res: Response) => {
   try {
-    console.log('🚀 Starting batch collection for all sites...');
+    console.log('🚀 Starting batch collection for all sites using queue...');
 
-    // Get all active sites
-    const sites = await prisma.site.findMany({
-      where: { monitoringEnabled: true }
-    });
+    // Trigger manual run which will use the queue system
+    const result = await triggerManualRun();
 
-    if (sites.length === 0) {
+    if (result.success) {
+      console.log(`✅ Successfully queued ${result.jobsScheduled} jobs`);
       return res.json({
-        message: 'No active sites found',
-        totalSites: 0,
-        startedJobs: 0
+        success: true,
+        message: `Queued ${result.jobsScheduled} performance tests for processing`,
+        details: {
+          jobsScheduled: result.jobsScheduled,
+          cleanedJobs: result.cleanedJobs,
+          timestamp: result.timestamp
+        }
+      });
+    } else {
+      console.error('❌ Failed to queue jobs:', result.error);
+      return res.status(500).json({
+        success: false,
+        error: result.error || 'Failed to queue performance tests',
+        timestamp: result.timestamp
       });
     }
-
-    // Create collection jobs for each site
-    const jobs = [];
-    for (const site of sites) {
-      try {
-        // Check if there's already a running job for this site
-        const existingJob = await prisma.scheduledJob.findFirst({
-          where: {
-            siteId: site.id,
-            status: 'running'
-          }
-        });
-
-        if (existingJob) {
-          console.log(`⏭️ Skipping ${site.name} - already has running job`);
-          continue;
-        }
-
-        // Create mobile and desktop jobs
-        for (const deviceType of ['mobile', 'desktop']) {
-          const job = await prisma.scheduledJob.create({
-            data: {
-              siteId: site.id,
-              jobType: 'lighthouse',
-              status: 'pending',
-              scheduledFor: new Date()
-            }
-          });
-          jobs.push({ ...job, siteName: site.name, deviceType });
-          console.log(`✅ Created ${deviceType} job for ${site.name}`);
-        }
-      } catch (error) {
-        console.error(`❌ Failed to create job for ${site.name}:`, error);
-      }
-    }
-
-    console.log(`📊 Created ${jobs.length} collection jobs for ${sites.length} sites`);
-
-    // Note: Actual collection would be handled by a background service
-    // This just creates the jobs in the database
-
-    res.json({
-      message: `Started performance testing for ${sites.length} sites`,
-      totalSites: sites.length,
-      startedJobs: jobs.length,
-      sites: sites.map(s => ({ id: s.id, name: s.name })),
-      jobs: jobs.map(j => ({
-        id: j.id,
-        siteId: j.siteId,
-        siteName: j.siteName,
-        deviceType: j.deviceType
-      }))
-    });
-
   } catch (error) {
-    console.error('Error in batch collection:', error);
-    res.status(500).json({ error: 'Failed to start batch collection' });
+    console.error('Error in collect-all:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to start batch collection'
+    });
   }
 });
 
