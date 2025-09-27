@@ -3,7 +3,7 @@ import { prisma } from './database';
 
 // Create queues for different job types
 export const performanceQueue = new Bull('performance-metrics', {
-  redis: {
+  redis: process.env.REDIS_URL || {
     host: process.env.REDIS_HOST || 'localhost',
     port: parseInt(process.env.REDIS_PORT || '6379'),
   },
