@@ -82,7 +82,7 @@ export class PerformanceCollector {
 
       const auth = new GoogleAuth({
         keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
-        scopes: ['openid'],
+        // PageSpeed API doesn't require OAuth scopes for service accounts
       });
 
       console.log('🔄 Getting auth client...');
