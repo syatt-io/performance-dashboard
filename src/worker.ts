@@ -1,16 +1,23 @@
 import { performanceQueue } from './services/queue';
 import { collectAndSaveMetrics } from './services/lighthouseWorker';
+import { collectComprehensiveMetrics } from './services/lighthouseWorkerV2';
 import { prisma } from './services/database';
 import Bull from 'bull';
 
 // Process performance collection jobs
 performanceQueue.process('collect-metrics', async (job: Bull.Job) => {
-  const { siteId, deviceType, scheduledJobId } = job.data;
+  const { siteId, deviceType, scheduledJobId, comprehensive } = job.data;
 
-  console.log(`[Worker] Processing job ${job.id}: Site ${siteId} (${deviceType})`);
+  console.log(`[Worker] Processing job ${job.id}: Site ${siteId} (${deviceType || 'comprehensive'})`);
 
   try {
-    await collectAndSaveMetrics(siteId, deviceType, scheduledJobId);
+    // Use V2 for comprehensive testing if flag is set
+    if (comprehensive) {
+      await collectComprehensiveMetrics(siteId, scheduledJobId);
+    } else {
+      // Backward compatibility for single device type tests
+      await collectAndSaveMetrics(siteId, deviceType, scheduledJobId);
+    }
     console.log(`[Worker] Job ${job.id} completed successfully`);
   } catch (error) {
     console.error(`[Worker] Job ${job.id} failed:`, error);
