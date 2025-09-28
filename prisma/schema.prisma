@@ -12,6 +12,9 @@ model Site {
   id                String   @id @default(uuid())
   name              String
   url               String   @unique
+  categoryUrl       String?  @map("category_url")
+  productUrl        String?  @map("product_url")
+  isShopify         Boolean  @default(true) @map("is_shopify")
   monitoringEnabled Boolean  @default(true)
   checkFrequency    Int      @default(360)
   createdAt         DateTime @default(now())
@@ -19,6 +22,7 @@ model Site {
 
   metrics       PerformanceMetric[]
   scheduledJobs ScheduledJob[]
+  testRuns      PerformanceTestRun[]
 
   @@map("sites")
 }
@@ -29,6 +33,7 @@ model PerformanceMetric {
   timestamp     DateTime @default(now())
   testLocation  String?
   deviceType    String   @default("mobile")
+  pageType      String   @default("homepage") @map("page_type")
 
   // Lighthouse scores
   performance   Int?
@@ -87,4 +92,44 @@ model ApiKey {
   updatedAt DateTime @updatedAt
 
   @@map("api_keys")
+}
+
+model PerformanceTestRun {
+  id           String   @id @default(uuid())
+  siteId       String   @map("site_id")
+  pageType     String   @default("homepage") @map("page_type")
+  pageUrl      String   @map("page_url")
+  deviceType   String   @default("mobile") @map("device_type")
+  runNumber    Int      @map("run_number")
+  batchId      String   @map("batch_id")
+  timestamp    DateTime @default(now())
+
+  // Lighthouse scores
+  performance   Int?
+  accessibility Int?  @map("accessibility")
+  bestPractices Int?  @map("best_practices")
+  seo           Int?
+
+  // Core Web Vitals
+  fcp           Float? // First Contentful Paint (seconds)
+  si            Float? // Speed Index (seconds)
+  lcp           Float? // Largest Contentful Paint (seconds)
+  tbt           Float? // Total Blocking Time (milliseconds)
+  cls           Float? // Cumulative Layout Shift
+  tti           Float? // Time to Interactive (seconds)
+  ttfb          Float? // Time to First Byte (milliseconds)
+
+  // Page metrics
+  pageLoadTime  Float? @map("page_load_time")
+  pageSize      Int?   @map("page_size")
+  requests      Int?
+
+  errorDetails  String? @map("error_details")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@index([siteId])
+  @@index([batchId])
+  @@index([timestamp(sort: Desc)])
+  @@map("performance_test_runs")
 }
