@@ -77,6 +77,12 @@ workers:
       - key: REDIS_PORT
         value: "6379"
         scope: RUN_AND_BUILD_TIME
+      - key: PAGESPEED_API_KEY
+        value: AIzaSyClK7IglzS_ziiQl_CF3AMKenRhDPFq44c
+        scope: RUN_TIME
+      - key: GOOGLE_SERVICE_ACCOUNT_BASE64
+        value: ${performance-dashboard.GOOGLE_SERVICE_ACCOUNT_BASE64}
+        scope: RUN_TIME
 
   # Scheduler for cron jobs
   - name: scheduler

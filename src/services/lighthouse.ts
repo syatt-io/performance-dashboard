@@ -850,22 +850,17 @@ export class PerformanceCollector {
       // Initialize headers for potential authentication
       let headers: HeadersInit = {};
 
-      // Use service account for authentication (25k requests/day limit)
-      const accessToken = await this.getGoogleAccessToken();
+      // PageSpeed API works best with API keys, not Bearer tokens
+      // The API key should be from the syatt-io project for 25k requests/day quota
+      const apiKey = process.env.PAGESPEED_API_KEY || 'AIzaSyClK7IglzS_ziiQl_CF3AMKenRhDPFq44c';
 
-      if (accessToken) {
-        console.log('🔑 Using Service Account (Bearer token) authentication - 25k requests/day');
-        console.log(`🎯 Service account token prefix: ${accessToken.substring(0, 20)}...`);
-        headers['Authorization'] = `Bearer ${accessToken}`;
+      if (apiKey) {
+        console.log('🔑 Using API Key authentication from syatt-io project');
+        console.log('📊 Quota: 25,000 requests/day with API key');
+        console.log(`🎯 API key prefix: ${apiKey.substring(0, 15)}...`);
+        params.append('key', apiKey);
       } else {
-        // Fall back to API key if no service account
-        const apiKey = process.env.PAGESPEED_API_KEY;
-        if (apiKey) {
-          console.log('🔑 Using API Key authentication (fallback)');
-          params.append('key', apiKey);
-        } else {
-          console.log('📝 Using free tier (no authentication) - limited to 25-100 requests/day');
-        }
+        console.log('📝 Using free tier (no authentication) - limited to 25-100 requests/day');
       }
 
       const apiUrl = `${baseUrl}?${params.toString()}`;
