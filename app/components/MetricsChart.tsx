@@ -8,7 +8,7 @@ import DateRangePicker from './DateRangePicker';
 
 interface MetricsChartProps {
   metrics: PerformanceMetric[];
-  metric: 'lcp' | 'fid' | 'cls' | 'tbt' | 'performanceScore' | 'imageOptimizationScore' | 'themeAssetSize' | 'thirdPartyBlockingTime';
+  metric: 'lcp' | 'fid' | 'cls' | 'tbt' | 'fcp' | 'speedIndex' | 'performanceScore' | 'imageOptimizationScore' | 'themeAssetSize' | 'thirdPartyBlockingTime';
   title: string;
   unit?: string;
   showTrend?: boolean;
@@ -88,6 +88,10 @@ function getMetricThresholds(metric: string) {
       return { good: 2.5, poor: 4.0 };
     case 'fid':
       return { good: 100, poor: 300 };
+    case 'fcp':
+      return { good: 1.8, poor: 3.0 };
+    case 'speedIndex':
+      return { good: 3.4, poor: 5.8 };
     case 'cls':
       return { good: 0.1, poor: 0.25 };
     case 'tbt':
@@ -238,7 +242,7 @@ const MetricsChart = memo(function MetricsChart({
               stroke="#10b981"
               strokeDasharray="5 5"
               strokeOpacity={0.6}
-              label={{ value: `Good (${thresholds.good}${unit})`, position: 'topRight', fontSize: 10 }}
+              label={{ value: `Good (${thresholds.good}${unit})`, position: 'top', fontSize: 10 }}
             />
           )}
           {thresholds.poor && (
@@ -247,7 +251,7 @@ const MetricsChart = memo(function MetricsChart({
               stroke="#ef4444"
               strokeDasharray="5 5"
               strokeOpacity={0.6}
-              label={{ value: `Poor (${thresholds.poor}${unit})`, position: 'topRight', fontSize: 10 }}
+              label={{ value: `Poor (${thresholds.poor}${unit})`, position: 'top', fontSize: 10 }}
             />
           )}
 

@@ -36,6 +36,10 @@ export interface LighthouseResult {
   lighthouseData?: any;
   error?: string;
   success: boolean;
+  // Additional fields for tracking test metadata
+  testProvider?: string;
+  testId?: string;
+  fallbackReason?: string;
 }
 
 export class PerformanceCollector {
@@ -589,7 +593,16 @@ export class PerformanceCollector {
       // Determine API key type
       const isCatchpointKey = apiKey.length > 40 && apiKey.includes('-');
 
-      let testData = {
+      let testData: {
+        url: string;
+        location: string;
+        mobile: string;
+        f: string;
+        runs: string;
+        lighthouse: string;
+        fvonly: string;
+        k?: string;
+      } = {
         url: url,
         location: config.location || 'ec2-us-east-1:Chrome',
         mobile: config.deviceType === 'mobile' ? '1' : '0',
@@ -747,7 +760,7 @@ export class PerformanceCollector {
           return {
             success: true,
             lcp,
-             undefined, // WebPageTest doesn't provide FID directly
+            fid: undefined, // WebPageTest doesn't provide FID directly
             cls,
             inp: undefined, // Not available in WebPageTest
             fcp,
@@ -1114,28 +1127,20 @@ export class PerformanceCollector {
           siteId,
           deviceType: config.deviceType,
           lcp: metrics.lcp,
-          // fid: metrics.fid,
           cls: metrics.cls,
           inp: metrics.inp,
           fcp: metrics.fcp,
           ttfb: metrics.ttfb,
-          // speedIndex: metrics.speedIndex,
+          si: metrics.speedIndex, // Map speedIndex to si field
           tbt: metrics.tbt,
           performance: metrics.performance,
-          // Shopify-specific metrics
-          imageOptimizationScore: metrics.imageOptimizationScore,
-          themeAssetSize: metrics.themeAssetSize,
-          thirdPartyBlockingTime: metrics.thirdPartyBlockingTime,
-          // WebPageTest-specific metrics
-          visualProgress: metrics.visualProgress,
-          loadTime: metrics.loadTime,
-          fullyLoadedTime: metrics.fullyLoadedTime,
-          bytesIn: metrics.bytesIn,
+          // Map some fields to available schema fields
+          pageLoadTime: metrics.loadTime,
+          pageSize: metrics.bytesIn,
           requests: metrics.requests,
-          testProvider: metrics?.testProvider || 'unknown',
-          testId: metrics?.testId,
-          lighthouseData: metrics,
-          location: config.location
+          testLocation: config.location
+          // Note: imageOptimizationScore, themeAssetSize, thirdPartyBlockingTime,
+          // visualProgress, testProvider, testId, lighthouseData are not in schema
         }
       });
 
@@ -1181,8 +1186,8 @@ export class PerformanceCollector {
       where: { id: siteId }
     });
 
-    if (!site || !site) {
-      throw new Error(`Site ${siteId} not found or inactive`);
+    if (!site || !site.monitoringEnabled) {
+      throw new Error(`Site ${siteId} not found or monitoring disabled`);
     }
 
     console.log(`\n🎯 ================================================`);
@@ -1193,11 +1198,12 @@ export class PerformanceCollector {
     console.log(`🎯 ================================================`);
 
     // Ensure default performance budgets exist for this site
-    try {
-      await alertService.createDefaultBudgets(siteId);
-    } catch (error) {
-      console.warn(`⚠️ Could not create default budgets for site ${siteId}:`, error);
-    }
+    // TODO: Implement alertService
+    // try {
+    //   await alertService.createDefaultBudgets(siteId);
+    // } catch (error) {
+    //   console.warn(`⚠️ Could not create default budgets for site ${siteId}:`, error);
+    // }
 
     // Collect metrics for mobile and desktop separately to see which fails
     const results = [];
@@ -1240,11 +1246,12 @@ export class PerformanceCollector {
     await this.checkAndCollectShopifyMetrics(siteId);
 
     // Check for performance regressions after collecting new data
-    try {
-      await alertService.checkForRegressions(siteId);
-    } catch (error) {
-      console.warn(`⚠️ Could not check for regressions for site ${siteId}:`, error);
-    }
+    // TODO: Implement alertService
+    // try {
+    //   await alertService.checkForRegressions(siteId);
+    // } catch (error) {
+    //   console.warn(`⚠️ Could not check for regressions for site ${siteId}:`, error);
+    // }
   }
 
   /**
@@ -1271,16 +1278,13 @@ export class PerformanceCollector {
 
     // First check database configuration
     if (site) {
-      // Decrypt credentials before use
-      const { apiKey } = decryptCredentials({ apiKey: site });
-
-      try {
-        const config = JSON.parse(apiKey || '');
-        isShopifyStore = config.isShopify === true;
-      } catch {
-        // Not a JSON config, check if URL contains shopify indicators
+      // Check if it's already marked as Shopify in the database
+      if (site.isShopify !== undefined) {
+        isShopifyStore = site.isShopify;
+      } else {
+        // Check if URL contains shopify indicators
         isShopifyStore = site.url.includes('myshopify.com') ||
-                        site !== null;
+                        site.url.includes('.shopify.com');
       }
     }
 
@@ -1326,7 +1330,7 @@ export class PerformanceCollector {
 
   async collectForAllSites(): Promise<void> {
     const sites = await prisma.site.findMany({
-      where: { isActive: true }
+      where: { monitoringEnabled: true }
     });
 
     console.log(`🔄 Starting performance collection for ${sites.length} active sites`);

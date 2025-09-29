@@ -262,15 +262,14 @@ export class SchedulerService {
     completed: number;
     failed: number;
     delayed: number;
-    paused: number;
+    paused: boolean;
   }> {
-    const [waiting, active, completed, failed, delayed, paused] = await Promise.all([
+    const [waiting, active, completed, failed, delayed] = await Promise.all([
       performanceQueue.getWaiting(),
       performanceQueue.getActive(),
       performanceQueue.getCompleted(),
       performanceQueue.getFailed(),
-      performanceQueue.getDelayed(),
-      performanceQueue.getPaused()
+      performanceQueue.getDelayed()
     ]);
 
     return {
@@ -279,7 +278,7 @@ export class SchedulerService {
       completed: completed.length,
       failed: failed.length,
       delayed: delayed.length,
-      paused: paused.length
+      paused: await performanceQueue.isPaused()
     };
   }
 

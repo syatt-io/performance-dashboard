@@ -72,8 +72,8 @@ export function isEncrypted(text: string): boolean {
 export function encryptCredentials(credentials: { apiKey?: string; accessToken?: string }) {
   const result = { ...credentials };
 
-  if (result && !isEncrypted(result)) {
-    result = encrypt(result);
+  if (result.apiKey && !isEncrypted(result.apiKey)) {
+    result.apiKey = encrypt(result.apiKey);
   }
 
   if (result.accessToken && !isEncrypted(result.accessToken)) {
@@ -91,9 +91,9 @@ export function encryptCredentials(credentials: { apiKey?: string; accessToken?:
 export function decryptCredentials(credentials: { apiKey?: string; accessToken?: string }) {
   const result = { ...credentials };
 
-  if (result && isEncrypted(result)) {
+  if (result.apiKey && isEncrypted(result.apiKey)) {
     try {
-      result = decrypt(result);
+      result.apiKey = decrypt(result.apiKey);
     } catch (error) {
       console.warn('Failed to decrypt API key, may be plain text');
     }

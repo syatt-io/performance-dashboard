@@ -467,6 +467,8 @@ router.get('/sites/:siteId/trends', async (req: Request, res: Response) => {
 router.get('/comparison', async (req: Request, res: Response) => {
   try {
     const { siteIds, timeRange = '24h', metric = 'performanceScore' } = req.query;
+  const metricStr = String(metric);
+  const timeRangeStr = String(timeRange);
 
     if (!siteIds) {
       return res.status(400).json({ error: 'siteIds parameter is required' });
@@ -476,7 +478,7 @@ router.get('/comparison', async (req: Request, res: Response) => {
 
     // Calculate time filter
     const timeFilter = new Date();
-    switch (timeRange) {
+    switch (timeRangeStr) {
       case '1h':
         timeFilter.setHours(timeFilter.getHours() - 1);
         break;
@@ -498,7 +500,7 @@ router.get('/comparison', async (req: Request, res: Response) => {
       where: {
         siteId: { in: siteIdArray },
         timestamp: { gte: timeFilter },
-        [metric]: { not: null }
+        [metricStr]: { not: null }
       },
       include: {
         site: {
@@ -533,16 +535,16 @@ router.get('/comparison', async (req: Request, res: Response) => {
         siteId,
         siteName: siteMetrics[0]?.site?.name || 'Unknown',
         siteUrl: siteMetrics[0]?.site?.url || '',
-        mobile: calculateStats(mobileMetrics, metric),
-        desktop: calculateStats(desktopMetrics, metric),
+        mobile: calculateStats(mobileMetrics, metricStr),
+        desktop: calculateStats(desktopMetrics, metricStr),
         totalDataPoints: siteMetrics.length,
         lastUpdated: siteMetrics[0]?.timestamp || null
       };
     });
 
     res.json({
-      metric,
-      timeRange,
+      metric: metricStr,
+      timeRange: timeRangeStr,
       comparison,
       siteCount: siteIdArray.length
     });
@@ -642,7 +644,7 @@ router.get('/job-status', async (req: Request, res: Response) => {
 
         activeJobs = jobs.map(job => ({
           id: job.id,
-          deviceType: job.deviceType,
+          jobType: job.jobType,
           status: job.status,
           scheduledFor: job.scheduledFor,
           startedAt: job.startedAt
@@ -744,7 +746,7 @@ router.post('/cleanup-stuck-jobs', async (req: Request, res: Response) => {
         id: job.id,
         siteId: job.siteId,
         siteName: job.site.name,
-        deviceType: job.deviceType,
+        jobType: job.jobType,
         originalStatus: job.status,
         stuckSince: job.startedAt || job.scheduledFor
       }))
