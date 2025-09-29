@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useCallback } from 'react';
-import { api } from '../lib/api';
+import { api, Site } from '../lib/api';
 import { useApp } from '../context/AppContext';
 
 export function usePerformanceDashboard() {
@@ -234,6 +234,10 @@ export function usePerformanceDashboard() {
     handleCollectMetrics();
   }, [setCollectionError, handleCollectMetrics]);
 
+  const handleSelectSite = useCallback((site: Site) => {
+    setSelectedSite(site);
+  }, [setSelectedSite]);
+
   return {
     // State
     ...state,
@@ -245,6 +249,7 @@ export function usePerformanceDashboard() {
     handleDeleteSite,
     handleDateRangeChange,
     handleRetryCollection,
+    handleSelectSite,
     loadSiteData
   };
 }

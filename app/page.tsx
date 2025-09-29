@@ -76,7 +76,8 @@ export default function Home() {
     handleUpdateSite,
     handleDeleteSite,
     handleDateRangeChange,
-    handleRetryCollection
+    handleRetryCollection,
+    handleSelectSite
   } = usePerformanceDashboard();
 
   // Modal state
@@ -260,7 +261,7 @@ export default function Home() {
                 <SiteCard
                   key={site.id}
                   site={site}
-                  onSelect={(site) => {/* Handle in usePerformanceDashboard */}}
+                  onSelect={handleSelectSite}
                   onEdit={handleOpenEditModal}
                   onDelete={handleOpenDeleteModal}
                 />
