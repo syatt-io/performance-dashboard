@@ -147,16 +147,16 @@ router.post('/sites/:siteId/collect', async (req: Request, res: Response) => {
           scheduledFor: new Date()
         }
       });
-      jobs.push(job);
+      jobs.push({ job, device });
     }
 
     const jobId = `collection-${Date.now()}`;
 
     // Run collection in background
     setImmediate(async () => {
-      for (const job of jobs) {
+      for (const { job, device } of jobs) {
         try {
-          console.log(`🚀 Starting background collection for site ${siteId} - ${site.name}`);
+          console.log(`🚀 Starting background collection for site ${siteId} - ${site.name} (${device})`);
 
           // Update job status to running
           await prisma.scheduledJob.update({
