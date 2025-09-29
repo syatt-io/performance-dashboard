@@ -9,7 +9,7 @@
     "worker": "tsx src/worker.ts",
     "scheduler": "tsx src/scheduler.ts",
     "dev:all": "concurrently \"npm run dev\" \"npm run dev:frontend\" \"npm run worker\" \"npm run scheduler\"",
-    "build": "prisma generate && tsc -p tsconfig.backend.json --skipLibCheck && ls -la dist/ && next build",
+    "build": "prisma generate && tsc -p tsconfig.backend.json --skipLibCheck && cp -r src/generated dist/ && ls -la dist/ && next build",
     "build:frontend": "next build",
     "start": "NODE_ENV=production PORT=3000 concurrently \"node dist/index.js\" \"node dist/worker.js\" \"node dist/scheduler.js\"",
     "start:frontend": "next start -p 3001",
