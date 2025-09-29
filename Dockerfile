@@ -1,7 +1,7 @@
 # Multi-stage build for production
 FROM node:18-alpine AS base
 
-# Install system dependencies for Puppeteer
+# Install system dependencies for Puppeteer and build tools
 RUN apk add --no-cache \
     chromium \
     nss \
@@ -9,7 +9,11 @@ RUN apk add --no-cache \
     freetype-dev \
     harfbuzz \
     ca-certificates \
-    ttf-freefont
+    ttf-freefont \
+    python3 \
+    py3-pip \
+    make \
+    g++
 
 # Tell Puppeteer to skip installing Chromium. We'll be using the installed package.
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
