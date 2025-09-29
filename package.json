@@ -11,7 +11,7 @@
     "dev:all": "concurrently \"npm run dev\" \"npm run dev:frontend\" \"npm run worker\" \"npm run scheduler\"",
     "build": "prisma generate && tsc --skipLibCheck || true",
     "build:frontend": "next build",
-    "start": "concurrently \"PORT=3333 node dist/src/index.js\" \"PORT=3000 next start\"",
+    "start": "npm run build && concurrently \"PORT=3333 node dist/src/index.js\" \"PORT=3000 next start\"",
     "start:frontend": "next start -p 3001",
     "start:worker": "npm run build && node dist/src/worker.js",
     "start:scheduler": "npm run build && node dist/src/scheduler.js",
