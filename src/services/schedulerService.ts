@@ -20,13 +20,13 @@ performanceQueue.process('collect-site-metrics', async (job) => {
   console.log(`🔄 Processing scheduled performance collection for site ${siteId}`);
 
   try {
-    // Create monitoring job record
-    const monitoringJob = await prisma.monitoringJob.create({
+    // Create scheduled job record
+    const scheduledJob = await prisma.scheduledJob.create({
       data: {
         siteId,
         jobType: 'lighthouse',
         status: 'running',
-        scheduledAt: new Date(),
+        scheduledFor: new Date(),
         startedAt: new Date()
       }
     });
@@ -35,8 +35,8 @@ performanceQueue.process('collect-site-metrics', async (job) => {
     await performanceCollector.collectForSite(siteId);
 
     // Update job status
-    await prisma.monitoringJob.update({
-      where: { id: monitoringJob.id },
+    await prisma.scheduledJob.update({
+      where: { id: scheduledJob.id },
       data: {
         status: 'completed',
         completedAt: new Date()
@@ -50,7 +50,7 @@ performanceQueue.process('collect-site-metrics', async (job) => {
 
     // Update job status to failed
     try {
-      await prisma.monitoringJob.updateMany({
+      await prisma.scheduledJob.updateMany({
         where: {
           siteId,
           status: 'running',
@@ -59,7 +59,7 @@ performanceQueue.process('collect-site-metrics', async (job) => {
         data: {
           status: 'failed',
           completedAt: new Date(),
-          errorMessage: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : 'Unknown error'
         }
       });
     } catch (dbError) {
@@ -94,7 +94,7 @@ performanceQueue.process('cleanup-stuck-jobs', async (job) => {
     const pendingTimeThreshold = new Date(Date.now() - 30 * 60 * 1000); // 30 minutes ago
 
     // Find stuck running jobs
-    const stuckRunningJobs = await prisma.monitoringJob.findMany({
+    const stuckRunningJobs = await prisma.scheduledJob.findMany({
       where: {
         status: 'running',
         startedAt: {
@@ -107,10 +107,10 @@ performanceQueue.process('cleanup-stuck-jobs', async (job) => {
     });
 
     // Find stuck pending jobs
-    const stuckPendingJobs = await prisma.monitoringJob.findMany({
+    const stuckPendingJobs = await prisma.scheduledJob.findMany({
       where: {
         status: 'pending',
-        scheduledAt: {
+        scheduledFor: {
           lte: pendingTimeThreshold
         }
       },
@@ -128,18 +128,18 @@ performanceQueue.process('cleanup-stuck-jobs', async (job) => {
 
     console.log(`Found ${allStuckJobs.length} stuck jobs to clean up:`);
     allStuckJobs.forEach(job => {
-      console.log(`- Job ${job.id} (${job.deviceType}) for ${job.site.name}: ${job.status} since ${job.startedAt || job.scheduledAt}`);
+      console.log(`- Job ${job.id} for ${job.site.name}: ${job.status} since ${job.startedAt || job.scheduledFor}`);
     });
 
     // Mark all stuck jobs as failed
-    const cleanupResult = await prisma.monitoringJob.updateMany({
+    const cleanupResult = await prisma.scheduledJob.updateMany({
       where: {
         id: { in: allStuckJobs.map(job => job.id) }
       },
       data: {
         status: 'failed',
         completedAt: new Date(),
-        errorMessage: 'Job stuck - cleaned up by automatic cleanup process'
+        error: 'Job stuck - cleaned up by automatic cleanup process'
       }
     });
 
@@ -285,7 +285,7 @@ export class SchedulerService {
 
   // Get recent monitoring jobs from database
   async getRecentMonitoringJobs(limit: number = 50): Promise<any[]> {
-    return prisma.monitoringJob.findMany({
+    return prisma.scheduledJob.findMany({
       include: {
         site: {
           select: {
@@ -295,7 +295,7 @@ export class SchedulerService {
           }
         }
       },
-      orderBy: { scheduledAt: 'desc' },
+      orderBy: { scheduledFor: 'desc' },
       take: limit
     });
   }

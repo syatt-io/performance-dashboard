@@ -427,7 +427,7 @@ router.get('/sites/:siteId/trends', async (req: Request, res: Response) => {
         avg_cls: count > 0 ? metrics.reduce((sum: number, m: any) => sum + (m.cls || 0), 0) / count : null,
         avg_fid: count > 0 ? metrics.reduce((sum: number, m: any) => sum + (m.fid || 0), 0) / count : null,
         avg_tbt: count > 0 ? metrics.reduce((sum: number, m: any) => sum + (m.tbt || 0), 0) / count : null,
-        avg_performance_score: count > 0 ? metrics.reduce((sum: number, m: any) => sum + (m.performanceScore || 0), 0) / count : null,
+        avg_performance_score: count > 0 ? metrics.reduce((sum: number, m: any) => sum + (m.performance || 0), 0) / count : null,
         avg_fcp: count > 0 ? metrics.reduce((sum: number, m: any) => sum + (m.fcp || 0), 0) / count : null,
         avg_ttfb: count > 0 ? metrics.reduce((sum: number, m: any) => sum + (m.ttfb || 0), 0) / count : null,
         avg_speed_index: count > 0 ? metrics.reduce((sum: number, m: any) => sum + (m.speedIndex || 0), 0) / count : null,
@@ -577,10 +577,10 @@ router.post('/test-lighthouse-local', async (req: Request, res: Response) => {
         fcp: result.fcp,
         ttfb: result.ttfb,
         speedIndex: result.speedIndex,
-        performanceScore: result.performanceScore
+        performanceScore: result.performance
       },
       error: result.error,
-      lighthouseData: result.lighthouseData
+      lighthouseData: result
     });
 
   } catch (error) {
@@ -731,7 +731,7 @@ router.post('/cleanup-stuck-jobs', async (req: Request, res: Response) => {
       data: {
         status: 'failed',
         completedAt: new Date(),
-        errorMessage: 'Job stuck - cleaned up by system'
+        error: 'Job stuck - cleaned up by system'
       }
     });
 

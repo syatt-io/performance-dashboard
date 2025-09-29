@@ -78,8 +78,7 @@ router.get('/:id', validateUuidParam('id'), async (req: Request, res: Response) 
       include: {
         _count: {
           select: {
-            metrics: true,
-            alerts: { where: { isResolved: false } }
+            metrics: true
           }
         }
       }
@@ -89,9 +88,8 @@ router.get('/:id', validateUuidParam('id'), async (req: Request, res: Response) 
       return res.status(404).json({ error: 'Site not found' });
     }
 
-    // Remove sensitive fields from response
-    const { apiKey, accessToken, ...safeSite } = site;
-    res.json(safeSite);
+    // Return site directly (no sensitive fields to remove)
+    res.json(site);
   } catch (error) {
     console.error('Error fetching site:', error);
     res.status(500).json({ error: 'Failed to fetch site' });
@@ -101,15 +99,16 @@ router.get('/:id', validateUuidParam('id'), async (req: Request, res: Response) 
 router.put('/:id', validateUuidParam('id'), validateSiteUpdate, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, url, shopifyDomain, isActive } = req.body;
+    const { name, url, monitoringEnabled, checkFrequency, isShopify } = req.body;
 
     const site = await prisma.site.update({
       where: { id },
       data: {
         ...(name && { name }),
         ...(url && { url }),
-        ...(shopifyDomain !== undefined && { shopifyDomain }),
-        ...(isActive !== undefined && { isActive }),
+        ...(monitoringEnabled !== undefined && { monitoringEnabled }),
+        ...(checkFrequency !== undefined && { checkFrequency }),
+        ...(isShopify !== undefined && { isShopify }),
       }
     });
 

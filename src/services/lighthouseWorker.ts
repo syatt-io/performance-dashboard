@@ -34,7 +34,7 @@ export async function runLighthouseTest(
   // Convert the result to the expected format
   // Note: Some metrics might not be available from PageSpeed API
   return {
-    performance: result.performanceScore || 0,
+    performance: result.performance || 0,
     accessibility: 0, // PageSpeed API doesn't provide this in performance mode
     bestPractices: 0, // PageSpeed API doesn't provide this in performance mode
     seo: 0, // PageSpeed API doesn't provide this in performance mode

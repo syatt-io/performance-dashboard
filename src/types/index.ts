@@ -2,10 +2,11 @@ export interface Site {
   id: string;
   name: string;
   url: string;
-  shopifyDomain?: string;
+  isShopify?: boolean;
+  monitoringEnabled?: boolean;
+  checkFrequency?: number;
   createdAt: Date;
   updatedAt: Date;
-  isActive: boolean;
 }
 
 export interface PerformanceMetric {

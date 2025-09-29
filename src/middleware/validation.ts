@@ -41,7 +41,7 @@ export const validateSiteCreation = (req: Request, res: Response, next: NextFunc
   // Sanitize inputs
   req.body.name = name.trim();
   req.body.url = url.trim();
-  if (shopifyDomain) req.body.shopifyDomain = shopifyDomain.trim();
+  if (shopifyDomain) req.body = shopifyDomain.trim();
 
   next();
 };
@@ -81,7 +81,7 @@ export const validateSiteUpdate = (req: Request, res: Response, next: NextFuncti
     if (shopifyDomain !== null && (typeof shopifyDomain !== 'string' || shopifyDomain.length > 100)) {
       return res.status(400).json({ error: 'Shopify domain must be a string with max 100 characters' });
     }
-    if (shopifyDomain) req.body.shopifyDomain = shopifyDomain.trim();
+    if (shopifyDomain) req.body = shopifyDomain.trim();
   }
 
   if (isActive !== undefined && typeof isActive !== 'boolean') {

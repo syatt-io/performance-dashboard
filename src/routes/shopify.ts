@@ -175,9 +175,9 @@ router.get('/config/:siteId', async (req: Request, res: Response) => {
       products: []
     };
 
-    if (site.apiKey) {
+    if (site) {
       try {
-        config = JSON.parse(site.apiKey);
+        config = JSON.parse(site);
       } catch {
         // apiKey is not JSON, assume not configured
       }
@@ -221,9 +221,9 @@ router.post('/config/:siteId/collection', async (req: Request, res: Response) =>
       products: []
     };
 
-    if (site.apiKey) {
+    if (site) {
       try {
-        config = JSON.parse(site.apiKey);
+        config = JSON.parse(site);
       } catch {
         // Start fresh
       }
@@ -284,9 +284,9 @@ router.post('/config/:siteId/product', async (req: Request, res: Response) => {
       products: []
     };
 
-    if (site.apiKey) {
+    if (site) {
       try {
-        config = JSON.parse(site.apiKey);
+        config = JSON.parse(site);
       } catch {
         // Start fresh
       }

@@ -85,17 +85,16 @@ export class ShopifyMetricsCollector {
           fcp: metrics.fcp,
           cls: metrics.cls,
           ttfb: metrics.ttfb,
-          speedIndex: metrics.speedIndex,
-          performanceScore: metrics.performanceScore,
-          lighthouseData: {
-            ...metrics.lighthouseData,
-            shopifyPage: {
-              type: 'collection',
-              name: collectionName,
-              url: collectionUrl,
-              timestamp: new Date().toISOString()
-            }
-          }
+          // speedIndex: metrics.speedIndex,
+          performance: metrics.performance,
+//           lighthouseData: {
+//             ...metrics.lighthouseData,
+//             shopifyPage: {
+//               type: 'collection',
+//               name: collectionName,
+//               url: collectionUrl,
+//               timestamp: new Date().toISOString()
+//             }
         }
       });
 
@@ -114,22 +113,22 @@ export class ShopifyMetricsCollector {
             fcp: desktopMetrics.fcp,
             cls: desktopMetrics.cls,
             ttfb: desktopMetrics.ttfb,
-            speedIndex: desktopMetrics.speedIndex,
-            performanceScore: desktopMetrics.performanceScore,
-            lighthouseData: {
-              ...desktopMetrics.lighthouseData,
-              shopifyPage: {
-                type: 'collection',
-                name: collectionName,
-                url: collectionUrl,
-                timestamp: new Date().toISOString()
-              }
-            }
+            // speedIndex: desktopMetrics.speedIndex,
+            performance: desktopMetrics.performance
+//             lighthouseData: {
+//               ...desktopMetrics.lighthouseData,
+//               shopifyPage: {
+//                 type: 'collection',
+//                 name: collectionName,
+//                 url: collectionUrl,
+//                 timestamp: new Date().toISOString()
+//               }
+//             }
           }
         });
       }
 
-      console.log(`✅ Collection metrics collected - LCP: ${metrics.lcp?.toFixed(2)}s, Score: ${metrics.performanceScore}/100`);
+      console.log(`✅ Collection metrics collected - LCP: ${metrics.lcp?.toFixed(2)}s, Score: ${metrics.performance}/100`);
 
       return {
         url: collectionUrl,
@@ -175,19 +174,18 @@ export class ShopifyMetricsCollector {
           lcp: metrics.lcp,
           fcp: metrics.fcp,
           cls: metrics.cls,
-          fid: metrics.fid,
+          // fid: metrics.fid,
           ttfb: metrics.ttfb,
-          speedIndex: metrics.speedIndex,
-          performanceScore: metrics.performanceScore,
-          lighthouseData: {
-            ...metrics.lighthouseData,
-            shopifyPage: {
-              type: 'product',
-              name: productName,
-              url: productUrl,
-              timestamp: new Date().toISOString()
-            }
-          }
+          // speedIndex: metrics.speedIndex,
+          performance: metrics.performance,
+//           lighthouseData: {
+//             ...metrics.lighthouseData,
+//             shopifyPage: {
+//               type: 'product',
+//               name: productName,
+//               url: productUrl,
+//               timestamp: new Date().toISOString()
+//             }
         }
       });
 
@@ -205,24 +203,24 @@ export class ShopifyMetricsCollector {
             lcp: desktopMetrics.lcp,
             fcp: desktopMetrics.fcp,
             cls: desktopMetrics.cls,
-            fid: desktopMetrics.fid,
+            // fid: desktopMetrics.fid,
             ttfb: desktopMetrics.ttfb,
-            speedIndex: desktopMetrics.speedIndex,
-            performanceScore: desktopMetrics.performanceScore,
-            lighthouseData: {
-              ...desktopMetrics.lighthouseData,
-              shopifyPage: {
-                type: 'product',
-                name: productName,
-                url: productUrl,
-                timestamp: new Date().toISOString()
-              }
-            }
+            // speedIndex: desktopMetrics.speedIndex,
+            performance: desktopMetrics.performance,
+//             lighthouseData: {
+//               ...desktopMetrics.lighthouseData,
+//               shopifyPage: {
+//                 type: 'product',
+//                 name: productName,
+//                 url: productUrl,
+//                 timestamp: new Date().toISOString()
+//               }
+//             }
           }
         });
       }
 
-      console.log(`✅ Product metrics collected - LCP: ${metrics.lcp?.toFixed(2)}s, Score: ${metrics.performanceScore}/100`);
+      console.log(`✅ Product metrics collected - LCP: ${metrics.lcp?.toFixed(2)}s, Score: ${metrics.performance}/100`);
 
       return {
         url: productUrl,
@@ -252,7 +250,8 @@ export class ShopifyMetricsCollector {
 
     console.log(`🛍️ Starting Shopify page metrics collection for ${site.name}`);
 
-    const shopifyDomain = site.shopifyDomain || this.getShopifyDomain(site.url);
+    // Site doesn't have shopifyDomain field in current schema
+    const shopifyDomain = this.getShopifyDomain(site.url);
 
     if (!shopifyDomain) {
       console.warn(`⚠️ Not a Shopify store or domain not detected for ${site.url}`);
@@ -275,36 +274,36 @@ export class ShopifyMetricsCollector {
       // Add more specific collections/products as needed
     ];
 
-    // If the site has specific collection/product URLs stored, use those
-    if (site.apiKey) {
-      // Decrypt credentials before use
-      const { apiKey } = decryptCredentials({ apiKey: site.apiKey });
-
-      // apiKey field could store JSON with specific URLs to monitor
-      try {
-        const config = JSON.parse(apiKey || '');
-        if (config.collections) {
-          config.collections.forEach((collection: any) => {
-            criticalPages.push({
-              url: collection.url,
-              type: 'collection',
-              name: collection.name
-            });
-          });
-        }
-        if (config.products) {
-          config.products.forEach((product: any) => {
-            criticalPages.push({
-              url: product.url,
-              type: 'product',
-              name: product.name
-            });
-          });
-        }
-      } catch {
-        // apiKey is not JSON config, skip
-      }
-    }
+    // Commented out - apiKey field doesn't exist in current schema
+    // if (site.apiKey) {
+    //   // Decrypt credentials before use
+    //   const { apiKey } = decryptCredentials({ apiKey: site.apiKey });
+    //
+    //   // apiKey field could store JSON with specific URLs to monitor
+    //   try {
+    //     const config = JSON.parse(apiKey || '');
+    //     if (config.collections) {
+    //       config.collections.forEach((collection: any) => {
+    //         criticalPages.push({
+    //           url: collection.url,
+    //           type: 'collection',
+    //           name: collection.name
+    //         });
+    //       });
+    //     }
+    //     if (config.products) {
+    //       config.products.forEach((product: any) => {
+    //         criticalPages.push({
+    //           url: product.url,
+    //           type: 'product',
+    //           name: product.name
+    //         });
+    //       });
+    //     }
+    //   } catch {
+    //     // apiKey is not JSON config, skip
+    //   }
+    // }
 
     // Collect metrics for each critical page
     for (const page of criticalPages) {
@@ -362,33 +361,34 @@ export class ShopifyMetricsCollector {
     };
 
     metrics.forEach(metric => {
-      const data = metric.lighthouseData as any;
-      if (data?.shopifyPage) {
-        const pageData = {
-          url: data.shopifyPage.url,
-          name: data.shopifyPage.name,
-          type: data.shopifyPage.type,
-          lcp: metric.lcp,
-          cls: metric.cls,
-          performanceScore: metric.performanceScore,
-          deviceType: metric.deviceType,
-          timestamp: metric.timestamp
-        };
+      // lighthouseData field doesn't exist - entire block disabled
+      // const data = metric.lighthouseData as any;
+      // if (data?.shopifyPage) {
+      //   const pageData = {
+      //     url: data.shopifyPage.url,
+      //     name: data.shopifyPage.name,
+      //     type: data.shopifyPage.type,
+      //     lcp: metric.lcp,
+      //     cls: metric.cls,
+      //     performance: metric.performance,
+      //     deviceType: metric.deviceType,
+      //     timestamp: metric.timestamp
+      //   };
 
-        switch (data.shopifyPage.type) {
-          case 'collection':
-            summary.collections.push(pageData);
-            break;
-          case 'product':
-            summary.products.push(pageData);
-            break;
-          case 'home':
-            summary.home.push(pageData);
-            break;
-          default:
-            summary.other.push(pageData);
-        }
-      }
+      //   switch (data.shopifyPage.type) {
+      //     case 'collection':
+      //       summary.collections.push(pageData);
+      //       break;
+      //     case 'product':
+      //       summary.products.push(pageData);
+      //       break;
+      //     case 'home':
+      //       summary.home.push(pageData);
+      //       break;
+      //     default:
+      //       summary.other.push(pageData);
+      //   }
+      // }
     });
 
     return summary;
@@ -409,19 +409,19 @@ export class ShopifyMetricsCollector {
       collections: {
         avgLCP: calculateAverage(summary.collections, 'lcp'),
         avgCLS: calculateAverage(summary.collections, 'cls'),
-        avgScore: calculateAverage(summary.collections, 'performanceScore'),
+        avgScore: calculateAverage(summary.collections, 'performance'),
         count: summary.collections.length
       },
       products: {
         avgLCP: calculateAverage(summary.products, 'lcp'),
         avgCLS: calculateAverage(summary.products, 'cls'),
-        avgScore: calculateAverage(summary.products, 'performanceScore'),
+        avgScore: calculateAverage(summary.products, 'performance'),
         count: summary.products.length
       },
       home: {
         avgLCP: calculateAverage(summary.home, 'lcp'),
         avgCLS: calculateAverage(summary.home, 'cls'),
-        avgScore: calculateAverage(summary.home, 'performanceScore'),
+        avgScore: calculateAverage(summary.home, 'performance'),
         count: summary.home.length
       }
     };

@@ -40,7 +40,7 @@ export async function runSingleTest(
   }
 
   return {
-    performance: result.performanceScore || 0,
+    performance: result.performance || 0,
     accessibility: 0,
     bestPractices: 0,
     seo: 0,

@@ -1,5 +1,5 @@
 import { prisma } from './database';
-import { alertService } from './alertService';
+
 import { shopifyMetricsCollector } from './shopifyMetrics';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -23,7 +23,7 @@ export interface LighthouseResult {
   ttfb?: number;
   speedIndex?: number;
   tbt?: number;
-  performanceScore?: number;
+  performance?: number;
   imageOptimizationScore?: number;
   themeAssetSize?: number;
   thirdPartyBlockingTime?: number;
@@ -226,12 +226,12 @@ export class PerformanceCollector {
       const ttfb = audits['server-response-time']?.numericValue || undefined;
       const speedIndex = audits['speed-index']?.numericValue ? audits['speed-index'].numericValue / 1000 : undefined;
       const tbt = audits['total-blocking-time']?.numericValue || undefined;
-      const performanceScore = lhr.categories?.performance?.score ? Math.round(lhr.categories.performance.score * 100) : undefined;
+      const performance = lhr.categories?.performance?.score ? Math.round(lhr.categories.performance.score * 100) : undefined;
 
       // Validate critical metrics
-      if (lcp === undefined && fcp === undefined && performanceScore === undefined) {
+      if (lcp === undefined && fcp === undefined && performance === undefined) {
         console.error(`❌ No valid performance metrics extracted from Lighthouse result`);
-        console.error(`📝 Audit values: LCP=${lcp}, FCP=${fcp}, CLS=${cls}, Performance=${performanceScore}`);
+        console.error(`📝 Audit values: LCP=${lcp}, FCP=${fcp}, CLS=${cls}, Performance=${performance}`);
         throw new Error('Failed to extract any valid performance metrics from Lighthouse result');
       }
 
@@ -268,7 +268,7 @@ export class PerformanceCollector {
         requestCount: audits['third-party-summary']?.details?.items?.length || 0
       };
 
-      console.log(`✅ Local Lighthouse CLI metrics - LCP: ${lcp?.toFixed(2)}s, CLS: ${cls?.toFixed(3)}, Performance: ${performanceScore}/100`);
+      console.log(`✅ Local Lighthouse CLI metrics - LCP: ${lcp?.toFixed(2)}s, CLS: ${cls?.toFixed(3)}, Performance: ${performance}/100`);
 
       return {
         success: true,
@@ -280,7 +280,7 @@ export class PerformanceCollector {
         ttfb,
         speedIndex,
         tbt,
-        performanceScore,
+        performance,
         imageOptimizationScore,
         themeAssetSize: themeAssets.totalByteWeight,
         thirdPartyBlockingTime: thirdPartyImpact.blockingTime,
@@ -688,7 +688,7 @@ export class PerformanceCollector {
           const speedIndex = lighthouse?.audits?.['speed-index']?.numericValue
             ? lighthouse.audits['speed-index'].numericValue / 1000 : undefined;
           const tbt = lighthouse?.audits?.['total-blocking-time']?.numericValue || undefined;
-          const performanceScore = lighthouse?.categories?.performance?.score
+          const performance = lighthouse?.categories?.performance?.score
             ? Math.round(lighthouse.categories.performance.score * 100) : undefined;
 
           // WebPageTest-specific metrics
@@ -740,21 +740,21 @@ export class PerformanceCollector {
             image: frame.image
           })) : undefined;
 
-          console.log(`✅ WebPageTest metrics - LCP: ${lcp?.toFixed(2)}s, CLS: ${cls?.toFixed(3)}, Performance: ${performanceScore}/100`);
+          console.log(`✅ WebPageTest metrics - LCP: ${lcp?.toFixed(2)}s, CLS: ${cls?.toFixed(3)}, Performance: ${performance}/100`);
           console.log(`📊 WebPageTest specifics - Load: ${loadTime?.toFixed(2)}s, Fully Loaded: ${fullyLoadedTime?.toFixed(2)}s, Requests: ${requests}`);
           console.log(`🖼️ Image optimization score: ${imageOptimizationScore}/100 (${imageOptimization.unoptimizedImages} unoptimized images)`);
 
           return {
             success: true,
             lcp,
-            fid: undefined, // WebPageTest doesn't provide FID directly
+             undefined, // WebPageTest doesn't provide FID directly
             cls,
             inp: undefined, // Not available in WebPageTest
             fcp,
             ttfb,
             speedIndex,
             tbt,
-            performanceScore,
+            performance,
             imageOptimizationScore,
             themeAssetSize: themeAssets.totalByteWeight,
             thirdPartyBlockingTime: thirdPartyImpact.blockingTime,
@@ -951,7 +951,7 @@ export class PerformanceCollector {
       // Total Blocking Time - only available in lab data
       const tbt = audits['total-blocking-time']?.numericValue || undefined;
 
-      const performanceScore = lighthouseResult.categories?.performance?.score ? Math.round(lighthouseResult.categories.performance.score * 100) : undefined;
+      const performance = lighthouseResult.categories?.performance?.score ? Math.round(lighthouseResult.categories.performance.score * 100) : undefined;
 
       // Extract Shopify-specific image optimization metrics
       const imageOptimization = {
@@ -1001,7 +1001,7 @@ export class PerformanceCollector {
         cls: fieldData?.CUMULATIVE_LAYOUT_SHIFT_SCORE?.percentile !== undefined ? 'field' : 'lab',
         fcp: fieldData?.FIRST_CONTENTFUL_PAINT_MS?.percentile ? 'field' : 'lab'
       };
-      console.log(`✅ PageSpeed Insights metrics (${dataSource}) - LCP: ${lcp?.toFixed(2)}s (${dataSourceDetails.lcp}), CLS: ${cls?.toFixed(3)} (${dataSourceDetails.cls}), Performance: ${performanceScore}/100`);
+      console.log(`✅ PageSpeed Insights metrics (${dataSource}) - LCP: ${lcp?.toFixed(2)}s (${dataSourceDetails.lcp}), CLS: ${cls?.toFixed(3)} (${dataSourceDetails.cls}), Performance: ${performance}/100`);
       console.log(`🖼️ Image optimization score: ${imageOptimizationScore}/100 (${imageOptimization.unoptimizedImages} unoptimized images)`);
       console.log(`📦 Theme assets: ${Math.round(themeAssets.totalByteWeight / 1024)}KB total, ${themeAssets.renderBlockingResources} blocking resources`);
       console.log(`📊 Raw field data - LCP: ${fieldData?.LARGEST_CONTENTFUL_PAINT_MS?.percentile}ms, CLS: ${fieldData?.CUMULATIVE_LAYOUT_SHIFT_SCORE?.percentile}, FCP: ${fieldData?.FIRST_CONTENTFUL_PAINT_MS?.percentile}ms`);
@@ -1016,7 +1016,7 @@ export class PerformanceCollector {
         ttfb,
         speedIndex,
         tbt,
-        performanceScore,
+        performance,
         // New Shopify-specific metrics
         imageOptimizationScore,
         themeAssetSize: themeAssets.totalByteWeight,
@@ -1060,11 +1060,11 @@ export class PerformanceCollector {
 
       //   if (localResult.success) {
       //     console.log(`✅ Local Lighthouse fallback succeeded`);
-      //     console.log(`📈 Metrics collected: LCP=${localResult.lcp?.toFixed(2)}s, CLS=${localResult.cls?.toFixed(3)}, Performance=${localResult.performanceScore}/100`);
+      //     console.log(`📈 Metrics collected: LCP=${localResult.lcp?.toFixed(2)}s, CLS=${localResult.cls?.toFixed(3)}, Performance=${localResult.performance}/100`);
       //     // Add a note to the lighthouse data that this was a fallback
-      //     if (localResult.lighthouseData) {
-      //       localResult.lighthouseData.fallbackReason = 'PageSpeed API quota/auth error';
-      //       localResult.lighthouseData.originalError = errorMessage;
+      //     if (localResult) {
+      //       localResult.fallbackReason = 'PageSpeed API quota/auth error';
+      //       localResult.originalError = errorMessage;
       //     }
       //   } else {
       //     console.log(`❌ Local Lighthouse fallback also failed`);
@@ -1114,14 +1114,14 @@ export class PerformanceCollector {
           siteId,
           deviceType: config.deviceType,
           lcp: metrics.lcp,
-          fid: metrics.fid,
+          // fid: metrics.fid,
           cls: metrics.cls,
           inp: metrics.inp,
           fcp: metrics.fcp,
           ttfb: metrics.ttfb,
-          speedIndex: metrics.speedIndex,
+          // speedIndex: metrics.speedIndex,
           tbt: metrics.tbt,
-          performanceScore: metrics.performanceScore,
+          performance: metrics.performance,
           // Shopify-specific metrics
           imageOptimizationScore: metrics.imageOptimizationScore,
           themeAssetSize: metrics.themeAssetSize,
@@ -1132,46 +1132,35 @@ export class PerformanceCollector {
           fullyLoadedTime: metrics.fullyLoadedTime,
           bytesIn: metrics.bytesIn,
           requests: metrics.requests,
-          testProvider: metrics.lighthouseData?.testProvider || 'unknown',
-          testId: metrics.lighthouseData?.testId,
-          lighthouseData: metrics.lighthouseData,
+          testProvider: metrics?.testProvider || 'unknown',
+          testId: metrics?.testId,
+          lighthouseData: metrics,
           location: config.location
         }
       });
 
       console.log(`✅ [${config.deviceType.toUpperCase()}] Successfully stored metrics for ${url} - DB ID: ${performanceMetric.id}`);
-      console.log(`📊 [${config.deviceType.toUpperCase()}] Metrics: LCP=${metrics.lcp?.toFixed(2)}s, CLS=${metrics.cls?.toFixed(3)}, Performance=${metrics.performanceScore}/100`);
+      console.log(`📊 [${config.deviceType.toUpperCase()}] Metrics: LCP=${metrics.lcp?.toFixed(2)}s, CLS=${metrics.cls?.toFixed(3)}, Performance=${metrics.performance}/100`);
 
       // Log data source for debugging
-      const testProvider = metrics.lighthouseData?.testProvider || 'unknown';
+      const testProvider = metrics?.testProvider || 'unknown';
       const dataSource = testProvider === 'webpagetest' ? 'WebPageTest API' :
                         testProvider === 'pagespeed' ? 'PageSpeed Insights API' :
-                        metrics.lighthouseData?.fallbackReason ? 'Local Lighthouse (fallback)' : 'Unknown';
+                        metrics?.fallbackReason ? 'Local Lighthouse (fallback)' : 'Unknown';
       console.log(`🔍 [${config.deviceType.toUpperCase()}] Data source: ${dataSource}`);
 
       // Log additional WebPageTest metrics if available
       if (testProvider === 'webpagetest') {
         console.log(`📊 [${config.deviceType.toUpperCase()}] WebPageTest extras: Load=${metrics.loadTime?.toFixed(2)}s, Fully Loaded=${metrics.fullyLoadedTime?.toFixed(2)}s, Requests=${metrics.requests}`);
-        if (metrics.lighthouseData?.testId) {
-          console.log(`🔗 [${config.deviceType.toUpperCase()}] Test URL: https://www.webpagetest.org/result/${metrics.lighthouseData.testId}`);
+        if (metrics?.testId) {
+          console.log(`🔗 [${config.deviceType.toUpperCase()}] Test URL: https://www.webpagetest.org/result/${metrics.testId}`);
         }
       }
 
-      console.log(`🚨 [${config.deviceType.toUpperCase()}] Processing through alert service...`);
-      // Process metrics through alert service
-      await alertService.processMetric(siteId, {
-        deviceType: config.deviceType,
-        performanceScore: metrics.performanceScore,
-        lcp: metrics.lcp,
-        cls: metrics.cls,
-        fid: metrics.fid,
-        fcp: metrics.fcp,
-        ttfb: metrics.ttfb,
-        speedIndex: metrics.speedIndex,
-        tbt: metrics.tbt
-      });
-
-      console.log(`✅ [${config.deviceType.toUpperCase()}] Alert processing complete for ${url}`);
+      // Alert service disabled for now - tables don't exist
+      // console.log(`🚨 [${config.deviceType.toUpperCase()}] Processing through alert service...`);
+      // await alertService.processMetric(siteId, { ... });
+      // console.log(`✅ [${config.deviceType.toUpperCase()}] Alert processing complete for ${url}`);
 
       // Check if this is a Shopify store and collect additional metrics (only once per site per session)
       console.log(`🔍 [${config.deviceType.toUpperCase()}] Calling checkAndCollectShopifyMetrics for site ${siteId}`);
@@ -1192,7 +1181,7 @@ export class PerformanceCollector {
       where: { id: siteId }
     });
 
-    if (!site || !site.isActive) {
+    if (!site || !site) {
       throw new Error(`Site ${siteId} not found or inactive`);
     }
 
@@ -1281,9 +1270,9 @@ export class PerformanceCollector {
     let isShopifyStore = false;
 
     // First check database configuration
-    if (site.apiKey) {
+    if (site) {
       // Decrypt credentials before use
-      const { apiKey } = decryptCredentials({ apiKey: site.apiKey });
+      const { apiKey } = decryptCredentials({ apiKey: site });
 
       try {
         const config = JSON.parse(apiKey || '');
@@ -1291,7 +1280,7 @@ export class PerformanceCollector {
       } catch {
         // Not a JSON config, check if URL contains shopify indicators
         isShopifyStore = site.url.includes('myshopify.com') ||
-                        site.shopifyDomain !== null;
+                        site !== null;
       }
     }
 
