@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
 import routes from './routes';
 import { connectDatabase } from './services/database';
 // import { schedulerService } from './services/schedulerService';
@@ -53,6 +54,17 @@ app.use('/api', routes);
 // Temporary admin routes for migration
 import adminRoutes from './routes/admin';
 app.use('/api/admin', adminRoutes);
+
+// In production, serve static files from Next.js build
+if (process.env.NODE_ENV === 'production') {
+  const frontendPath = path.join(__dirname, '../out');
+  app.use(express.static(frontendPath));
+
+  // Handle client-side routing - serve index.html for non-API routes
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(frontendPath, 'index.html'));
+  });
+}
 
 async function startServer() {
   await connectDatabase();
