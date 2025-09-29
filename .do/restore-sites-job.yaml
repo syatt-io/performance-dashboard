@@ -1,0 +1,26 @@
+name: restore-sites-job
+databases:
+- engine: PG
+  name: db
+  num_nodes: 1
+  size: basic
+  version: "15"
+jobs:
+- name: restore-sites
+  source_dir: /
+  github:
+    repo: syatt-io/performance-dashboard
+    branch: main
+  environment_slug: node-js
+  build_command: npm ci && npm install uuid && npx prisma generate
+  run_command: node scripts/restore-sites-from-json.js
+  instance_count: 1
+  instance_size_slug: basic-xs
+  envs:
+  - key: DATABASE_URL
+    scope: RUN_AND_BUILD_TIME
+    type: SECRET
+    value: ${db.DATABASE_URL}
+  - key: NODE_ENV
+    scope: RUN_AND_BUILD_TIME
+    value: production
