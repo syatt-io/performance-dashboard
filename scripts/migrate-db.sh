@@ -56,6 +56,13 @@ log "Generating Prisma client for PostgreSQL..."
 npx prisma generate
 
 log "Creating PostgreSQL database schema..."
+echo "⚠️  WARNING: This will reset the database and destroy all data!"
+echo "⚠️  This should ONLY be used for initial setup, never in production!"
+read -p "Are you sure you want to continue? (yes/no): " confirmation
+if [ "$confirmation" != "yes" ]; then
+    echo "❌ Operation cancelled by user"
+    exit 1
+fi
 npx prisma db push --force-reset
 
 log "Running database migrations..."

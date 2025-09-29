@@ -17,9 +17,17 @@ else
     echo "[Migration] Check /tmp/migration.log for details"
     echo "[Migration] Attempting manual migration fixes..."
 
-    # If migration fails, try to push the schema directly
-    echo "[Migration] Attempting to push schema to fix database state..."
-    npx prisma db push --force-reset --skip-generate 2>&1 | tee /tmp/migration-push.log
+    # If migration fails, DO NOT reset production data - log error and exit
+    echo "[Migration] ❌ CRITICAL: Migration failed in production"
+    echo "[Migration] ❌ REFUSING to reset database - this would destroy all data"
+    echo "[Migration] ❌ Manual intervention required. Check logs and fix migrations manually"
+    echo "[Migration] ❌ Application startup BLOCKED to prevent data loss"
+    echo ""
+    echo "MIGRATION FAILURE LOGS:"
+    cat /tmp/migration.log
+    echo ""
+    echo "❌ DEPLOYMENT FAILED - DATABASE MIGRATION REQUIRED"
+    exit 1
 fi
 
 # Start both the API server and Next.js frontend
