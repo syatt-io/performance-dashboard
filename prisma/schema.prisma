@@ -49,6 +49,7 @@ model PerformanceMetric {
   cls           Float? // Cumulative Layout Shift
   tti           Float? // Time to Interactive (seconds)
   ttfb          Float? // Time to First Byte (milliseconds)
+  inp           Float? // Interaction to Next Paint (milliseconds)
 
   // Page metrics
   pageLoadTime  Float?
@@ -118,6 +119,7 @@ model PerformanceTestRun {
   cls           Float? // Cumulative Layout Shift
   tti           Float? // Time to Interactive (seconds)
   ttfb          Float? // Time to First Byte (milliseconds)
+  inp           Float? // Interaction to Next Paint (milliseconds)
 
   // Page metrics
   pageLoadTime  Float? @map("page_load_time")
