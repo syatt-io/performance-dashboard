@@ -33,11 +33,19 @@ export default function MultiSiteOverview({ sites, onSiteSelect }: MultiSiteOver
     loadAllSiteData();
   }, [sites]);
 
-  // Real-time job status polling
+  // Real-time job status polling with rate limit handling
   useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    let currentDelay = 10000; // Start with 10 seconds
+    const MAX_DELAY = 60000; // Max 60 seconds
+    const MIN_DELAY = 10000; // Min 10 seconds
+
     const pollJobStatus = async () => {
       try {
         const jobStatus = await api.getJobStatus();
+
+        // Success - reset to normal polling interval
+        currentDelay = MIN_DELAY;
 
         // Update site data with job status information
         setSiteData(prevData =>
@@ -57,18 +65,30 @@ export default function MultiSiteOverview({ sites, onSiteSelect }: MultiSiteOver
             };
           })
         );
-      } catch (error) {
-        console.error('Failed to fetch job status:', error);
+      } catch (error: any) {
+        // Check if it's a 429 rate limit error
+        if (error?.message?.includes('429') || error?.message?.includes('Rate limit')) {
+          // Exponential backoff - double the delay
+          currentDelay = Math.min(currentDelay * 2, MAX_DELAY);
+          console.warn(`Rate limited. Backing off to ${currentDelay}ms`);
+        } else {
+          console.error('Failed to fetch job status:', error);
+        }
       }
+
+      // Reschedule with current delay
+      if (interval) {
+        clearInterval(interval);
+      }
+      interval = setInterval(pollJobStatus, currentDelay);
     };
 
     // Initial poll
     pollJobStatus();
 
-    // Set up polling interval
-    const interval = setInterval(pollJobStatus, 3000); // Poll every 3 seconds
-
-    return () => clearInterval(interval);
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, []);
 
   const loadAllSiteData = async () => {
@@ -87,14 +107,19 @@ export default function MultiSiteOverview({ sites, onSiteSelect }: MultiSiteOver
 
     setSiteData(data);
 
-    // Load summaries for each site
+    // Load summaries for each site with delay to avoid rate limits
     for (let i = 0; i < sites.length; i++) {
       try {
         const summary = await api.getMetricsSummary(sites[i].id);
         setSiteData(prev => prev.map((item, index) =>
           index === i ? { ...item, summary, loading: false } : item
         ));
-      } catch (error) {
+
+        // Add 500ms delay between requests to avoid rate limiting
+        if (i < sites.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      } catch (error: any) {
         setSiteData(prev => prev.map((item, index) =>
           index === i ? {
             ...item,
@@ -102,6 +127,14 @@ export default function MultiSiteOverview({ sites, onSiteSelect }: MultiSiteOver
             error: error instanceof Error ? error.message : 'Failed to load metrics'
           } : item
         ));
+
+        // If rate limited, add longer delay before next request
+        if (error?.message?.includes('429') || error?.message?.includes('Rate limit')) {
+          console.warn(`Rate limited loading site ${sites[i].name}, waiting 2s before next request`);
+          if (i < sites.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+        }
       }
     }
 
@@ -285,17 +318,18 @@ export default function MultiSiteOverview({ sites, onSiteSelect }: MultiSiteOver
       setCollectionMessage(`Started performance testing for ${result.totalSites} sites`);
 
       // Keep checking for updates periodically while collection is running
+      // Reduced frequency to avoid rate limits - job status polling handles real-time updates
       const checkInterval = setInterval(() => {
         loadAllSiteData();
-      }, 10000); // Check every 10 seconds
+      }, 30000); // Check every 30 seconds
 
-      // Stop checking after 5 minutes (collection should be done by then)
+      // Stop checking after 10 minutes (collection should be done by then)
       setTimeout(() => {
         clearInterval(checkInterval);
         setCollectingAll(false);
         setCollectionMessage(null);
         loadAllSiteData(); // Final refresh
-      }, 300000); // 5 minutes
+      }, 600000); // 10 minutes
 
     } catch (error) {
       console.error('❌ Failed to start collection for all sites:', error);
