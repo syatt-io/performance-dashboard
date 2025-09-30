@@ -5,15 +5,19 @@
 export function validateEnvironmentVariables(): void {
   const requiredEnvVars = [
     'DATABASE_URL',
-    'REDIS_URL',
     'ENCRYPTION_KEY',
     'PAGESPEED_API_KEY',
   ];
 
+  const optionalEnvVars = {
+    'REDIS_URL': 'Queue functionality may not work without Redis. Fallback: localhost:6379',
+  };
+
   const missing: string[] = [];
   const invalid: string[] = [];
+  const warnings: string[] = [];
 
-  // Check for missing variables
+  // Check for missing required variables
   requiredEnvVars.forEach(key => {
     if (!process.env[key]) {
       missing.push(key);
@@ -26,6 +30,13 @@ export function validateEnvironmentVariables(): void {
       'Please set these variables in your .env file or environment configuration.'
     );
   }
+
+  // Check for missing optional variables
+  Object.entries(optionalEnvVars).forEach(([key, message]) => {
+    if (!process.env[key]) {
+      warnings.push(`${key}: ${message}`);
+    }
+  });
 
   // Validate specific format requirements
   if (process.env.ENCRYPTION_KEY && process.env.ENCRYPTION_KEY.length < 32) {
@@ -44,6 +55,12 @@ export function validateEnvironmentVariables(): void {
     throw new Error(
       `Invalid environment variable formats:\n${invalid.map(v => `  - ${v}`).join('\n')}`
     );
+  }
+
+  // Log warnings
+  if (warnings.length > 0) {
+    console.warn('⚠️  Optional environment variables not set:');
+    warnings.forEach(warning => console.warn(`  - ${warning}`));
   }
 
   // Log success
