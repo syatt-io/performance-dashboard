@@ -1138,9 +1138,12 @@ export class PerformanceCollector {
           pageLoadTime: metrics.loadTime,
           pageSize: metrics.bytesIn,
           requests: metrics.requests,
-          testLocation: config.location
-          // Note: imageOptimizationScore, themeAssetSize, thirdPartyBlockingTime,
-          // visualProgress, testProvider, testId, lighthouseData are not in schema
+          testLocation: config.location,
+          // Shopify-specific metrics
+          imageOptimizationScore: metrics.imageOptimizationScore,
+          themeAssetSize: metrics.themeAssetSize,
+          thirdPartyBlockingTime: metrics.thirdPartyBlockingTime
+          // Note: visualProgress, testProvider, testId, lighthouseData are not in schema
         }
       });
 

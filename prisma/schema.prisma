@@ -56,6 +56,11 @@ model PerformanceMetric {
   pageSize      Int?
   requests      Int?
 
+  // Shopify-specific metrics
+  imageOptimizationScore  Float? // Image optimization score (0-100)
+  themeAssetSize          Float? // Total theme asset size in bytes
+  thirdPartyBlockingTime  Float? // Third-party blocking time in milliseconds
+
   errorDetails  String?
 
   site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
