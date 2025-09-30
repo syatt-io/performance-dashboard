@@ -10,6 +10,7 @@ import MultiSiteOverview from './components/MultiSiteOverview';
 import SiteComparison from './components/SiteComparison';
 import SiteModal from './components/modals/SiteModal';
 import DeleteConfirmModal from './components/modals/DeleteConfirmModal';
+import { ComponentErrorBoundary } from './components/ErrorBoundary';
 
 const PerformanceTargetsLegend = memo(function PerformanceTargetsLegend() {
   return (
@@ -84,8 +85,8 @@ export default function Home() {
   const [showAddSiteModal, setShowAddSiteModal] = useState(false);
   const [showEditSiteModal, setShowEditSiteModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [editingSite, setEditingSite] = useState(null);
-  const [deletingSite, setDeletingSite] = useState(null);
+  const [editingSite, setEditingSite] = useState<any>(null);
+  const [deletingSite, setDeletingSite] = useState<any>(null);
   const [siteFormData, setSiteFormData] = useState({
     name: '',
     url: '',
@@ -238,7 +239,9 @@ export default function Home() {
               </button>
             </div>
           ) : (
-            <MultiSiteOverview sites={sites} onSiteSelect={handleSiteSelectFromOverview} />
+            <ComponentErrorBoundary>
+              <MultiSiteOverview sites={sites} onSiteSelect={handleSiteSelectFromOverview} />
+            </ComponentErrorBoundary>
           )}
         </div>
       ) : (
@@ -279,17 +282,19 @@ export default function Home() {
           {/* Metrics Dashboard */}
           <div className="lg:col-span-2">
             {selectedSite && summary ? (
-              <SiteDashboard
-                site={selectedSite}
-                summary={summary}
-                metrics={metrics}
-                collecting={collecting}
-                collectionError={collectionError}
-                dateRange={dateRange}
-                onCollectMetrics={handleCollectMetrics}
-                onDateRangeChange={handleDateRangeChange}
-                onRetryCollection={handleRetryCollection}
-              />
+              <ComponentErrorBoundary>
+                <SiteDashboard
+                  site={selectedSite}
+                  summary={summary}
+                  metrics={metrics}
+                  collecting={collecting}
+                  collectionError={collectionError}
+                  dateRange={dateRange}
+                  onCollectMetrics={handleCollectMetrics}
+                  onDateRangeChange={handleDateRangeChange}
+                  onRetryCollection={handleRetryCollection}
+                />
+              </ComponentErrorBoundary>
             ) : selectedSite ? (
               <div className="bg-white rounded-lg shadow p-8 text-center">
                 <div className="text-gray-500 mb-4">

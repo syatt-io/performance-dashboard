@@ -127,7 +127,7 @@ export default function MultiSiteOverview({ sites, onSiteSelect }: MultiSiteOver
   };
 
   const getTargetTooltip = (metric: string) => {
-    const targets = {
+    const targets: Record<string, string> = {
       'performance': 'Target: ≥90/100 for good performance',
       'lcp': 'Target: ≤2.48s for good performance',
       'cls': 'Target: ≤0.10 for good performance',

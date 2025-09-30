@@ -135,7 +135,7 @@ router.post('/sites/:siteId/collect', async (req: Request, res: Response) => {
     }
 
     // Create monitoring jobs for collection
-    const jobs = [];
+    const jobs: Array<{ job: any; device: string }> = [];
     const deviceTypes = deviceType && ['mobile', 'desktop'].includes(deviceType)
       ? [deviceType]
       : ['mobile', 'desktop'];
@@ -169,7 +169,7 @@ router.post('/sites/:siteId/collect', async (req: Request, res: Response) => {
             }
           });
 
-          await performanceCollector.collectAndStore(siteId, site.url, { deviceType: device });
+          await performanceCollector.collectAndStore(siteId, site.url, { deviceType: device as 'mobile' | 'desktop' });
 
           // Update job status to completed
           await prisma.scheduledJob.update({
@@ -202,7 +202,7 @@ router.post('/sites/:siteId/collect', async (req: Request, res: Response) => {
       jobId,
       siteId,
       url: site.url,
-      jobs: jobs.map(j => ({ id: j.id, status: j.status }))
+      jobs: jobs.map(j => ({ id: j.job.id, status: j.job.status }))
     });
   } catch (error) {
     console.error('Error starting collection:', error);
@@ -358,84 +358,56 @@ router.get('/sites/:siteId/trends', async (req: Request, res: Response) => {
         timeFilter.setDate(timeFilter.getDate() - 30);
     }
 
-    // Build aggregation query based on timeRange and aggregation
-    let dateFormat: string;
+    // Use database-side aggregation for better performance with large datasets
+    let dateGroupFormat: string;
+    let dateTruncFormat: string;
+
     switch (aggregation) {
       case 'hourly':
-        dateFormat = '%Y-%m-%d %H:00:00';
-        break;
-      case 'daily':
-        dateFormat = '%Y-%m-%d';
+        dateGroupFormat = 'YYYY-MM-DD HH24:00:00';
+        dateTruncFormat = 'hour';
         break;
       case 'weekly':
-        dateFormat = '%Y-%u'; // Year-week
+        dateGroupFormat = 'YYYY-IW';
+        dateTruncFormat = 'week';
         break;
-      default:
-        dateFormat = '%Y-%m-%d';
+      default: // daily
+        dateGroupFormat = 'YYYY-MM-DD';
+        dateTruncFormat = 'day';
     }
 
-    // For now, let's use the standard Prisma approach instead of raw SQL
-    // Get all metrics for the time period and aggregate in JavaScript
-    const allMetrics = await prisma.performanceMetric.findMany({
-      where: {
-        siteId,
-        timestamp: { gte: timeFilter }
-      },
-      orderBy: { timestamp: 'asc' }
-    });
-
-    // Group by time period and device type
-    const groups: Record<string, any> = {};
-
-    allMetrics.forEach(metric => {
-      const date = new Date(metric.timestamp);
-      let period: string;
-
-      switch (aggregation) {
-        case 'hourly':
-          period = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:00:00`;
-          break;
-        case 'weekly':
-          const weekStart = new Date(date);
-          weekStart.setDate(date.getDate() - date.getDay());
-          period = weekStart.toISOString().split('T')[0];
-          break;
-        default: // daily
-          period = date.toISOString().split('T')[0];
-      }
-
-      const key = `${period}-${metric.deviceType}`;
-
-      if (!groups[key]) {
-        groups[key] = {
-          period,
-          deviceType: metric.deviceType,
-          metrics: []
-        };
-      }
-
-      groups[key].metrics.push(metric);
-    });
-
-    // Calculate averages
-    const aggregatedData = Object.values(groups).map((group: any) => {
-      const metrics = group.metrics;
-      const count = metrics.length;
-
-      return {
-        period: group.period,
-        deviceType: group.deviceType,
-        avg_lcp: count > 0 ? metrics.reduce((sum: number, m: any) => sum + (m.lcp || 0), 0) / count : null,
-        avg_cls: count > 0 ? metrics.reduce((sum: number, m: any) => sum + (m.cls || 0), 0) / count : null,
-        avg_fid: count > 0 ? metrics.reduce((sum: number, m: any) => sum + (m.fid || 0), 0) / count : null,
-        avg_tbt: count > 0 ? metrics.reduce((sum: number, m: any) => sum + (m.tbt || 0), 0) / count : null,
-        avg_performance_score: count > 0 ? metrics.reduce((sum: number, m: any) => sum + (m.performance || 0), 0) / count : null,
-        avg_fcp: count > 0 ? metrics.reduce((sum: number, m: any) => sum + (m.fcp || 0), 0) / count : null,
-        avg_ttfb: count > 0 ? metrics.reduce((sum: number, m: any) => sum + (m.ttfb || 0), 0) / count : null,
-        avg_speed_index: count > 0 ? metrics.reduce((sum: number, m: any) => sum + (m.speedIndex || 0), 0) / count : null,
-        data_points: count
-      };
-    });
+    // Use raw SQL for efficient aggregation with proper typing
+    const aggregatedData: Array<{
+      period: string;
+      deviceType: string;
+      avg_lcp: number | null;
+      avg_cls: number | null;
+      avg_fid: number | null;
+      avg_tbt: number | null;
+      avg_performance_score: number | null;
+      avg_fcp: number | null;
+      avg_ttfb: number | null;
+      avg_speed_index: number | null;
+      data_points: number;
+    }> = await prisma.$queryRaw`
+      SELECT
+        TO_CHAR(DATE_TRUNC(${dateTruncFormat}, timestamp), ${dateGroupFormat}) as period,
+        "deviceType",
+        AVG(lcp) as avg_lcp,
+        AVG(cls) as avg_cls,
+        AVG(fid) as avg_fid,
+        AVG(tbt) as avg_tbt,
+        AVG(performance) as avg_performance_score,
+        AVG(fcp) as avg_fcp,
+        AVG(ttfb) as avg_ttfb,
+        AVG("speedIndex") as avg_speed_index,
+        COUNT(*)::int as data_points
+      FROM "PerformanceMetric"
+      WHERE "siteId" = ${siteId}::uuid
+        AND timestamp >= ${timeFilter}
+      GROUP BY DATE_TRUNC(${dateTruncFormat}, timestamp), "deviceType"
+      ORDER BY DATE_TRUNC(${dateTruncFormat}, timestamp) ASC
+    `;
 
     // Transform data for chart consumption
     const chartData = (aggregatedData as any[]).map(row => ({

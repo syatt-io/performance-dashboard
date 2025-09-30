@@ -47,8 +47,10 @@ export function validateEnvironmentVariables(): void {
     invalid.push('DATABASE_URL (must start with postgresql://)');
   }
 
-  if (process.env.REDIS_URL && !process.env.REDIS_URL.startsWith('redis://')) {
-    invalid.push('REDIS_URL (must start with redis://)');
+  if (process.env.REDIS_URL &&
+      !process.env.REDIS_URL.startsWith('redis://') &&
+      !process.env.REDIS_URL.startsWith('rediss://')) {
+    invalid.push('REDIS_URL (must start with redis:// or rediss://)');
   }
 
   if (invalid.length > 0) {

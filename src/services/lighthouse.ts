@@ -110,7 +110,8 @@ export class PerformanceCollector {
         console.log('📋 Service account file project_id:', serviceAccountData.project_id);
         console.log('📋 Service account client_email:', serviceAccountData.client_email);
       } catch (error) {
-        console.warn('⚠️ Could not read service account file for debugging:', error.message);
+        const err = error as Error;
+        console.warn('⚠️ Could not read service account file for debugging:', err.message);
       }
 
       if (accessTokenResponse.token) {
@@ -123,11 +124,12 @@ export class PerformanceCollector {
         return null;
       }
     } catch (error) {
+      const err = error as any;
       console.error('❌ Service account authentication failed with detailed error:');
-      console.error('📝 Error name:', error.name);
-      console.error('📝 Error message:', error.message);
-      if (error.code) {
-        console.error('📝 Error code:', error.code);
+      console.error('📝 Error name:', err.name);
+      console.error('📝 Error message:', err.message);
+      if (err.code) {
+        console.error('📝 Error code:', err.code);
       }
       console.log('📝 Falling back to API key or free tier...');
       return null;
@@ -202,9 +204,10 @@ export class PerformanceCollector {
       try {
         lhr = JSON.parse(stdout);
       } catch (parseError) {
+        const err = parseError as Error;
         console.error(`❌ Failed to parse Lighthouse output as JSON`);
         console.error(`📝 Raw output (first 500 chars): ${stdout.substring(0, 500)}`);
-        throw new Error(`Invalid Lighthouse output format: ${parseError.message}`);
+        throw new Error(`Invalid Lighthouse output format: ${err.message}`);
       }
       const audits = lhr.audits;
 
@@ -426,13 +429,15 @@ export class PerformanceCollector {
               const parsed = JSON.parse(responseText);
               return Promise.resolve(parsed);
             } catch (e) {
-              return Promise.reject(new Error(`Invalid JSON in FlareSolverr response: ${e.message}`));
+              const err = e as Error;
+              return Promise.reject(new Error(`Invalid JSON in FlareSolverr response: ${err.message}`));
             }
           }
         } as Response;
 
       } catch (error) {
-        console.error('❌ FlareSolverr bypass failed:', error.message);
+        const err = error as Error;
+        console.error('❌ FlareSolverr bypass failed:', err.message);
         throw error;
       }
     };
@@ -466,7 +471,7 @@ export class PerformanceCollector {
           const isCatchpointKey = apiKey.length > 40 && apiKey.includes('-');
 
           let urlWithKey = new URL(targetUrl);
-          let apiHeaders = {};
+          let apiHeaders: Record<string, string> = {};
 
           if (isCatchpointKey) {
             // New Catchpoint API - use header authentication
@@ -514,7 +519,7 @@ export class PerformanceCollector {
             try {
               console.log('🔥 Switching to FlareSolverr for Cloudflare bypass...');
               let urlForFlare = new URL(targetUrl);
-              let flareHeaders = {};
+              let flareHeaders: Record<string, string> = {};
 
               if (isCatchpointKey) {
                 // For Catchpoint API, pass headers through FlareSolverr
@@ -530,7 +535,8 @@ export class PerformanceCollector {
               console.log('✅ FlareSolverr bypass successful!');
               return flareResponse;
             } catch (flareError) {
-              console.error('❌ FlareSolverr bypass failed:', flareError.message);
+              const err = flareError as Error;
+              console.error('❌ FlareSolverr bypass failed:', err.message);
 
               // If FlareSolverr fails and we have more retries, continue with normal retry
               if (attempt < maxRetries) {
@@ -568,15 +574,17 @@ export class PerformanceCollector {
                 console.log(`✅ Successfully parsed JSON response`);
                 return Promise.resolve(parsed);
               } catch (e) {
-                console.error(`❌ JSON parse error: ${e.message}`);
+                const err = e as Error;
+                console.error(`❌ JSON parse error: ${err.message}`);
                 console.log(`📄 Raw response: ${responseText.substring(0, 500)}...`);
-                return Promise.reject(new Error(`Invalid JSON response: ${e.message}`));
+                return Promise.reject(new Error(`Invalid JSON response: ${err.message}`));
               }
             }
           } as Response;
 
         } catch (error) {
-          console.error(`❌ Attempt ${attempt} failed:`, error.message);
+          const err = error as Error;
+          console.error(`❌ Attempt ${attempt} failed:`, err.message);
           if (attempt === maxRetries) throw error;
 
           const delay = Math.pow(2, attempt) * 1500 + (Math.random() * 500);
@@ -625,7 +633,7 @@ export class PerformanceCollector {
         submitUrl.searchParams.set(key, value);
       });
 
-      let requestHeaders = {
+      let requestHeaders: Record<string, string> = {
         'Content-Type': 'application/x-www-form-urlencoded',
       };
 
@@ -799,7 +807,8 @@ export class PerformanceCollector {
             throw new Error(`WebPageTest error: ${resultsData.statusText}`);
           }
         } catch (error) {
-          console.error(`❌ Error during polling attempt ${attempts}: ${error.message}`);
+          const err = error as Error;
+          console.error(`❌ Error during polling attempt ${attempts}: ${err.message}`);
           if (attempts >= maxAttempts) {
             throw error;
           }
@@ -1177,9 +1186,10 @@ export class PerformanceCollector {
       return performanceMetric.id;
 
     } catch (error) {
+      const err = error as Error;
       console.error(`❌ [${config.deviceType.toUpperCase()}] collectAndStore failed for ${url}:`, error);
-      console.error(`📝 [${config.deviceType.toUpperCase()}] Error type: ${error.constructor.name}`);
-      console.error(`📝 [${config.deviceType.toUpperCase()}] Error message: ${error.message}`);
+      console.error(`📝 [${config.deviceType.toUpperCase()}] Error type: ${err.constructor.name}`);
+      console.error(`📝 [${config.deviceType.toUpperCase()}] Error message: ${err.message}`);
       throw error;
     }
   }
@@ -1217,8 +1227,9 @@ export class PerformanceCollector {
       console.log(`✅ MOBILE collection succeeded for ${site.name} - Metric ID: ${mobileResult}`);
       results.push({ device: 'mobile', success: true, id: mobileResult });
     } catch (error) {
+      const err = error as Error;
       console.error(`❌ MOBILE collection failed for ${site.name}:`, error);
-      results.push({ device: 'mobile', success: false, error: error.message });
+      results.push({ device: 'mobile', success: false, error: err.message });
     }
 
     console.log(`🖥️ Starting DESKTOP collection for ${site.name}...`);
@@ -1227,8 +1238,9 @@ export class PerformanceCollector {
       console.log(`✅ DESKTOP collection succeeded for ${site.name} - Metric ID: ${desktopResult}`);
       results.push({ device: 'desktop', success: true, id: desktopResult });
     } catch (error) {
+      const err = error as Error;
       console.error(`❌ DESKTOP collection failed for ${site.name}:`, error);
-      results.push({ device: 'desktop', success: false, error: error.message });
+      results.push({ device: 'desktop', success: false, error: err.message });
     }
 
     // Log summary for this site
@@ -1313,7 +1325,8 @@ export class PerformanceCollector {
           console.log(`✅ Detected Shopify store via headers (x-shopid: ${shopId})`);
         }
       } catch (error) {
-        console.log(`⚠️ Could not check Shopify headers for ${site.url}:`, error.message);
+        const err = error as Error;
+        console.log(`⚠️ Could not check Shopify headers for ${site.url}:`, err.message);
       }
     }
 
