@@ -1,6 +1,18 @@
-const API_BASE = process.env.NODE_ENV === 'development'
-  ? 'http://localhost:3000/api'
-  : (process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}/api` : '/api');
+// Determine API base URL based on environment
+// In development: use localhost:3000
+// In production: use same origin (since frontend and backend are served from the same domain)
+const getAPIBase = () => {
+  if (typeof window === 'undefined') {
+    // Server-side (build time)
+    return '/api';
+  }
+
+  // Client-side runtime detection
+  const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  return isDevelopment ? 'http://localhost:3000/api' : '/api';
+};
+
+const API_BASE = getAPIBase();
 
 export interface Site {
   id: string;
