@@ -2,13 +2,18 @@ import { performanceQueue } from './services/queue';
 import { collectAndSaveMetrics } from './services/lighthouseWorker';
 import { collectComprehensiveMetrics } from './services/lighthouseWorkerV2';
 import { prisma } from './services/database';
+import { logger } from './utils/logger';
 import Bull from 'bull';
 
 // Process performance collection jobs
 performanceQueue.process('collect-metrics', async (job: Bull.Job) => {
   const { siteId, deviceType, scheduledJobId, comprehensive } = job.data;
 
-  console.log(`[Worker] Processing job ${job.id}: Site ${siteId} (${deviceType || 'comprehensive'})`);
+  logger.info(`[Worker] Processing job ${job.id}`, {
+    jobId: job.id,
+    siteId,
+    deviceType: deviceType || 'comprehensive'
+  });
 
   try {
     // Use V2 for comprehensive testing if flag is set
@@ -18,40 +23,40 @@ performanceQueue.process('collect-metrics', async (job: Bull.Job) => {
       // Backward compatibility for single device type tests
       await collectAndSaveMetrics(siteId, deviceType, scheduledJobId);
     }
-    console.log(`[Worker] Job ${job.id} completed successfully`);
+    logger.info(`[Worker] Job ${job.id} completed successfully`);
   } catch (error) {
-    console.error(`[Worker] Job ${job.id} failed:`, error);
+    logger.error(`[Worker] Job ${job.id} failed:`, { error, jobId: job.id, siteId });
     throw error; // Re-throw to mark job as failed for retry
   }
 });
 
 // Handle job events
 performanceQueue.on('completed', (job, result) => {
-  console.log(`[Worker] Job ${job.id} completed`);
+  logger.info(`[Worker] Job ${job.id} completed`);
 });
 
 performanceQueue.on('failed', (job, err) => {
-  console.error(`[Worker] Job ${job?.id} failed:`, err.message);
+  logger.error(`[Worker] Job ${job?.id} failed:`, { error: err.message, jobId: job?.id });
 });
 
 performanceQueue.on('stalled', (job) => {
-  console.warn(`[Worker] Job ${job?.id} stalled`);
+  logger.warn(`[Worker] Job ${job?.id} stalled`, { jobId: job?.id });
 });
 
 // Graceful shutdown
 process.on('SIGTERM', async () => {
-  console.log('[Worker] SIGTERM received, shutting down gracefully...');
+  logger.info('[Worker] SIGTERM received, shutting down gracefully...');
   await performanceQueue.close();
   await prisma.$disconnect();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
-  console.log('[Worker] SIGINT received, shutting down gracefully...');
+  logger.info('[Worker] SIGINT received, shutting down gracefully...');
   await performanceQueue.close();
   await prisma.$disconnect();
   process.exit(0);
 });
 
-console.log('[Worker] Performance metrics worker started');
-console.log('[Worker] Waiting for jobs...');
+logger.info('[Worker] Performance metrics worker started');
+logger.info('[Worker] Waiting for jobs...');

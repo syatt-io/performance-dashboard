@@ -1,20 +1,29 @@
 import Bull from 'bull';
+import { RedisOptions } from 'ioredis';
 import { prisma } from './database';
+import { logger } from '../utils/logger';
+
+// Type-safe Redis configuration
+interface RedisConfig extends RedisOptions {
+  host: string;
+  port: number;
+  password?: string;
+}
 
 // Parse Redis connection options
-function getRedisConfig() {
+function getRedisConfig(): string | RedisConfig {
   if (process.env.REDIS_URL) {
-    console.log('[Queue] Using REDIS_URL for connection');
+    logger.info('[Queue] Using REDIS_URL for connection');
 
     // For Upstash Redis, parse URL and add proper config
     if (process.env.REDIS_URL.includes('upstash.io') ||
         process.env.REDIS_URL.startsWith('rediss://') ||
         process.env.REDIS_URL.startsWith('redis://')) {
       const url = new URL(process.env.REDIS_URL);
-      const config: any = {
+      const config: RedisConfig = {
         host: url.hostname,
         port: parseInt(url.port) || 6379,
-        password: url.password,
+        password: url.password || undefined,
         maxRetriesPerRequest: null, // Disable retry limit for long-running jobs
         enableReadyCheck: false,
         connectTimeout: 10000,
@@ -23,11 +32,13 @@ function getRedisConfig() {
       // Add TLS if using rediss:// or upstash.io
       if (url.protocol === 'rediss:' || url.hostname.includes('upstash.io')) {
         config.tls = {
-          rejectUnauthorized: false,
+          // Enable proper TLS validation for security
+          // Only disable in development if you have certificate issues
+          rejectUnauthorized: process.env.NODE_ENV === 'production',
         };
       }
 
-      console.log(`[Queue] Configured Redis for ${url.hostname} with maxRetriesPerRequest=null`);
+      logger.info(`[Queue] Configured Redis for ${url.hostname} with TLS: ${!!config.tls}`);
       return config;
     }
 
@@ -35,11 +46,11 @@ function getRedisConfig() {
   }
 
   // Fallback to host/port for local development
-  const config = {
+  const config: RedisConfig = {
     host: process.env.REDIS_HOST || 'localhost',
     port: parseInt(process.env.REDIS_PORT || '6379'),
   };
-  console.log(`[Queue] Using Redis host:port connection: ${config.host}:${config.port}`);
+  logger.info(`[Queue] Using Redis host:port connection: ${config.host}:${config.port}`);
   return config;
 }
 
@@ -50,6 +61,7 @@ export const performanceQueue = new Bull('performance-metrics', {
     removeOnComplete: true,
     removeOnFail: false,
     attempts: 3,
+    timeout: 600000, // 10 minutes timeout for Lighthouse jobs
     backoff: {
       type: 'exponential',
       delay: 2000,
@@ -59,11 +71,11 @@ export const performanceQueue = new Bull('performance-metrics', {
 
 // Test Redis connection on startup
 performanceQueue.on('error', (error) => {
-  console.error('[Queue] Redis connection error:', error.message);
+  logger.error('[Queue] Redis connection error:', { error: error.message });
 });
 
 performanceQueue.on('ready', () => {
-  console.log('[Queue] Redis connection established successfully');
+  logger.info('[Queue] Redis connection established successfully');
 });
 
 // Job types
@@ -92,19 +104,19 @@ export async function addPerformanceJob(data: PerformanceJobData, options?: Bull
 
 // Schedule all sites for testing
 export async function scheduleAllSites() {
-  console.log('[Queue] Fetching sites with monitoring enabled...');
+  logger.info('[Queue] Fetching sites with monitoring enabled...');
   const sites = await prisma.site.findMany({
     where: { monitoringEnabled: true }
   });
 
-  console.log(`[Queue] Found ${sites.length} sites to schedule`);
+  logger.info(`[Queue] Found ${sites.length} sites to schedule`);
 
   const jobs = [];
 
   for (const site of sites) {
     // Create scheduled jobs in database
     for (const deviceType of ['mobile', 'desktop'] as const) {
-      console.log(`[Queue] Creating scheduled job for ${site.name} (${deviceType})`);
+      logger.info(`[Queue] Creating scheduled job for ${site.name} (${deviceType})`);
 
       const scheduledJob = await prisma.scheduledJob.create({
         data: {
@@ -115,7 +127,7 @@ export async function scheduleAllSites() {
         }
       });
 
-      console.log(`[Queue] Adding job to queue for ${site.name} (${deviceType})`);
+      logger.info(`[Queue] Adding job to queue for ${site.name} (${deviceType})`);
 
       // Add to queue
       const job = await addPerformanceJob({
@@ -128,7 +140,7 @@ export async function scheduleAllSites() {
     }
   }
 
-  console.log(`[Queue] Successfully scheduled ${jobs.length} jobs`);
+  logger.info(`[Queue] Successfully scheduled ${jobs.length} jobs`);
   return jobs;
 }
 

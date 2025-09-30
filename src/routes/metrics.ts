@@ -1,9 +1,11 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { prisma } from '../services/database';
+import { Prisma } from '../generated/prisma';
 import { performanceCollector } from '../services/lighthouse';
 import { scheduleAllSites, addPerformanceJob, cleanStuckJobs } from '../services/queue';
 import { triggerManualRun } from '../scheduler';
+import { logger } from '../utils/logger';
 
 const router = Router();
 
@@ -93,14 +95,14 @@ router.get('/sites/:siteId', async (req: Request, res: Response) => {
       total: metrics.length
     });
   } catch (error) {
-    console.error('Error fetching metrics:', error);
+    logger.error('Error fetching metrics:', { error, siteId: req.params.siteId });
     res.status(500).json({ error: 'Failed to fetch metrics' });
   }
 });
 
 router.post('/sites/:siteId/collect', async (req: Request, res: Response) => {
   try {
-    console.log(`📡 Collection endpoint called for site: ${req.params.siteId}`);
+    logger.info(`📡 Collection endpoint called for site: ${req.params.siteId}`);
     const { siteId } = req.params;
     const { deviceType = 'mobile' } = req.body || {};
 
@@ -134,14 +136,14 @@ router.post('/sites/:siteId/collect', async (req: Request, res: Response) => {
       });
     }
 
-    // Create monitoring jobs for collection
-    const jobs: Array<{ job: any; device: string }> = [];
+    // Create monitoring jobs and add to queue (safer than setImmediate)
+    const jobs: Array<{ scheduledJob: any; device: string; queueJob: any }> = [];
     const deviceTypes = deviceType && ['mobile', 'desktop'].includes(deviceType)
       ? [deviceType]
       : ['mobile', 'desktop'];
 
     for (const device of deviceTypes) {
-      const job = await prisma.scheduledJob.create({
+      const scheduledJob = await prisma.scheduledJob.create({
         data: {
           siteId,
           jobType: 'lighthouse',
@@ -149,63 +151,32 @@ router.post('/sites/:siteId/collect', async (req: Request, res: Response) => {
           scheduledFor: new Date()
         }
       });
-      jobs.push({ job, device });
+
+      // Add to Bull queue instead of running in background with setImmediate
+      const queueJob = await addPerformanceJob({
+        siteId,
+        deviceType: device as 'mobile' | 'desktop',
+        scheduledJobId: scheduledJob.id
+      });
+
+      jobs.push({ scheduledJob, device, queueJob });
     }
 
-    const jobId = `collection-${Date.now()}`;
-
-    // Run collection in background
-    setImmediate(async () => {
-      for (const { job, device } of jobs) {
-        try {
-          console.log(`🚀 Starting background collection for site ${siteId} - ${site.name} (${device})`);
-
-          // Update job status to running
-          await prisma.scheduledJob.update({
-            where: { id: job.id },
-            data: {
-              status: 'running',
-              startedAt: new Date()
-            }
-          });
-
-          await performanceCollector.collectAndStore(siteId, site.url, { deviceType: device as 'mobile' | 'desktop' });
-
-          // Update job status to completed
-          await prisma.scheduledJob.update({
-            where: { id: job.id },
-            data: {
-              status: 'completed',
-              completedAt: new Date()
-            }
-          });
-
-          console.log(`✅ Background collection completed for site ${siteId} (${device})`);
-        } catch (error) {
-          console.error(`❌ Background collection failed for ${siteId} (${device}):`, error);
-
-          // Update job status to failed
-          await prisma.scheduledJob.update({
-            where: { id: job.id },
-            data: {
-              status: 'failed',
-              completedAt: new Date(),
-              error: error instanceof Error ? error.message : 'Unknown error'
-            }
-          });
-        }
-      }
-    });
+    logger.info(`🚀 Queued ${jobs.length} collection jobs for site ${siteId}`);
 
     res.json({
-      message: `Performance collection started for site ${site.name}`,
-      jobId,
+      message: `Performance collection queued for site ${site.name}`,
       siteId,
       url: site.url,
-      jobs: jobs.map(j => ({ id: j.job.id, status: j.job.status }))
+      jobs: jobs.map(j => ({
+        id: j.scheduledJob.id,
+        status: j.scheduledJob.status,
+        queueJobId: j.queueJob.id,
+        device: j.device
+      }))
     });
   } catch (error) {
-    console.error('Error starting collection:', error);
+    logger.error('Error starting collection:', { error, siteId: req.params.siteId });
     res.status(500).json({ error: 'Failed to start metrics collection' });
   }
 });
@@ -331,7 +302,7 @@ router.get('/sites/:siteId/summary', async (req: Request, res: Response) => {
 
     res.json(summary);
   } catch (error) {
-    console.error('Error fetching summary:', error);
+    logger.error('Error fetching summary:', { error, siteId: req.params.siteId });
     res.status(500).json({ error: 'Failed to fetch metrics summary' });
   }
 });
@@ -359,24 +330,23 @@ router.get('/sites/:siteId/trends', async (req: Request, res: Response) => {
     }
 
     // Use database-side aggregation for better performance with large datasets
-    let dateGroupFormat: string;
-    let dateTruncFormat: string;
+    // Validate and sanitize aggregation parameter to prevent SQL injection
+    const validAggregations = ['hourly', 'daily', 'weekly'] as const;
+    type ValidAggregation = typeof validAggregations[number];
 
-    switch (aggregation) {
-      case 'hourly':
-        dateGroupFormat = 'YYYY-MM-DD HH24:00:00';
-        dateTruncFormat = 'hour';
-        break;
-      case 'weekly':
-        dateGroupFormat = 'YYYY-IW';
-        dateTruncFormat = 'week';
-        break;
-      default: // daily
-        dateGroupFormat = 'YYYY-MM-DD';
-        dateTruncFormat = 'day';
-    }
+    const sanitizedAggregation: ValidAggregation = validAggregations.includes(aggregation as ValidAggregation)
+      ? (aggregation as ValidAggregation)
+      : 'daily';
 
-    // Use raw SQL for efficient aggregation with proper typing
+    const dateFormats = {
+      hourly: { groupFormat: 'YYYY-MM-DD HH24:00:00', truncFormat: 'hour' },
+      daily: { groupFormat: 'YYYY-MM-DD', truncFormat: 'day' },
+      weekly: { groupFormat: 'YYYY-IW', truncFormat: 'week' }
+    };
+
+    const { groupFormat, truncFormat } = dateFormats[sanitizedAggregation];
+
+    // Use Prisma.sql for safe SQL construction with literals
     const aggregatedData: Array<{
       period: string;
       deviceType: string;
@@ -391,7 +361,7 @@ router.get('/sites/:siteId/trends', async (req: Request, res: Response) => {
       data_points: number;
     }> = await prisma.$queryRaw`
       SELECT
-        TO_CHAR(DATE_TRUNC(${dateTruncFormat}, timestamp), ${dateGroupFormat}) as period,
+        TO_CHAR(DATE_TRUNC(${Prisma.raw(`'${truncFormat}'`)}, timestamp), ${Prisma.raw(`'${groupFormat}'`)}) as period,
         "deviceType",
         AVG(lcp) as avg_lcp,
         AVG(cls) as avg_cls,
@@ -402,11 +372,11 @@ router.get('/sites/:siteId/trends', async (req: Request, res: Response) => {
         AVG(ttfb) as avg_ttfb,
         AVG("speedIndex") as avg_speed_index,
         COUNT(*)::int as data_points
-      FROM "PerformanceMetric"
+      FROM "performance_metrics"
       WHERE "siteId" = ${siteId}::uuid
         AND timestamp >= ${timeFilter}
-      GROUP BY DATE_TRUNC(${dateTruncFormat}, timestamp), "deviceType"
-      ORDER BY DATE_TRUNC(${dateTruncFormat}, timestamp) ASC
+      GROUP BY DATE_TRUNC(${Prisma.raw(`'${truncFormat}'`)}, timestamp), "deviceType"
+      ORDER BY DATE_TRUNC(${Prisma.raw(`'${truncFormat}'`)}, timestamp) ASC
     `;
 
     // Transform data for chart consumption
@@ -432,7 +402,7 @@ router.get('/sites/:siteId/trends', async (req: Request, res: Response) => {
       total: chartData.length
     });
   } catch (error) {
-    console.error('Error fetching trend data:', error);
+    logger.error('Error fetching trend data:', { error, siteId: req.params.siteId });
     res.status(500).json({ error: 'Failed to fetch trend data' });
   }
 });
@@ -523,7 +493,7 @@ router.get('/comparison', async (req: Request, res: Response) => {
       siteCount: siteIdArray.length
     });
   } catch (error) {
-    console.error('Error fetching comparison data:', error);
+    logger.error('Error fetching comparison data:', { error });
     res.status(500).json({ error: 'Failed to fetch comparison data' });
   }
 });
@@ -534,7 +504,7 @@ router.post('/test-lighthouse-local', async (req: Request, res: Response) => {
   try {
     const { url = 'https://www.example.com', deviceType = 'mobile' } = req.body;
 
-    console.log(`🧪 Testing local Lighthouse collection for ${url} (${deviceType})`);
+    logger.info(`🧪 Testing local Lighthouse collection for ${url} (${deviceType})`);
 
     // Call the local Lighthouse directly
     const result = await performanceCollector.collectMetricsLocally(url, { deviceType });
@@ -560,7 +530,7 @@ router.post('/test-lighthouse-local', async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Error testing local Lighthouse:', error);
+    logger.error('Error testing local Lighthouse:', { error, url: req.body.url });
     res.status(500).json({
       error: 'Failed to test local Lighthouse',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -571,7 +541,7 @@ router.post('/test-lighthouse-local', async (req: Request, res: Response) => {
 // Get current job status for all sites
 router.get('/job-status', async (req: Request, res: Response) => {
   try {
-    console.log('📊 Fetching job status for all sites...');
+    logger.info('📊 Fetching job status for all sites...');
 
     // Get all sites with their current running/pending jobs
     const sites = await prisma.site.findMany({
@@ -644,7 +614,7 @@ router.get('/job-status', async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Error fetching job status:', error);
+    logger.error('Error fetching job status:', { error });
     res.status(500).json({ error: 'Failed to fetch job status' });
   }
 });
@@ -652,7 +622,7 @@ router.get('/job-status', async (req: Request, res: Response) => {
 // Clean up stuck monitoring jobs
 router.post('/cleanup-stuck-jobs', async (req: Request, res: Response) => {
   try {
-    console.log('🧹 Starting cleanup of stuck monitoring jobs...');
+    logger.info('🧹 Starting cleanup of stuck monitoring jobs...');
 
     // Jobs are considered stuck if they've been running for more than 10 minutes
     // or pending for more than 30 minutes
@@ -694,9 +664,13 @@ router.post('/cleanup-stuck-jobs', async (req: Request, res: Response) => {
       });
     }
 
-    console.log(`Found ${allStuckJobs.length} stuck jobs to clean up:`);
-    allStuckJobs.forEach(job => {
-      console.log(`- Job ${job.id} for ${job.site.name}: ${job.status} since ${job.startedAt || job.scheduledFor}`);
+    logger.info(`Found ${allStuckJobs.length} stuck jobs to clean up:`, {
+      jobs: allStuckJobs.map(job => ({
+        id: job.id,
+        site: job.site.name,
+        status: job.status,
+        since: job.startedAt || job.scheduledFor
+      }))
     });
 
     // Mark all stuck jobs as failed
@@ -711,7 +685,7 @@ router.post('/cleanup-stuck-jobs', async (req: Request, res: Response) => {
       }
     });
 
-    console.log(`✅ Successfully cleaned up ${cleanupResult.count} stuck jobs`);
+    logger.info(`✅ Successfully cleaned up ${cleanupResult.count} stuck jobs`);
 
     res.json({
       message: `Successfully cleaned up ${cleanupResult.count} stuck monitoring jobs`,
@@ -727,7 +701,7 @@ router.post('/cleanup-stuck-jobs', async (req: Request, res: Response) => {
     });
 
   } catch (error) {
-    console.error('Error cleaning up stuck jobs:', error);
+    logger.error('Error cleaning up stuck jobs:', { error });
     res.status(500).json({ error: 'Failed to cleanup stuck jobs' });
   }
 });
@@ -735,13 +709,13 @@ router.post('/cleanup-stuck-jobs', async (req: Request, res: Response) => {
 // Collect metrics for all sites using queue system
 router.post('/collect-all', async (req: Request, res: Response) => {
   try {
-    console.log('🚀 Starting batch collection for all sites using queue...');
+    logger.info('🚀 Starting batch collection for all sites using queue...');
 
     // Trigger manual run which will use the queue system
     const result = await triggerManualRun();
 
     if (result.success) {
-      console.log(`✅ Successfully queued ${result.jobsScheduled} jobs`);
+      logger.info(`✅ Successfully queued ${result.jobsScheduled} jobs`);
       return res.json({
         success: true,
         message: `Queued ${result.jobsScheduled} performance tests for processing`,
@@ -752,7 +726,7 @@ router.post('/collect-all', async (req: Request, res: Response) => {
         }
       });
     } else {
-      console.error('❌ Failed to queue jobs:', result.error);
+      logger.error('❌ Failed to queue jobs:', { error: result.error });
       return res.status(500).json({
         success: false,
         error: result.error || 'Failed to queue performance tests',
@@ -760,7 +734,7 @@ router.post('/collect-all', async (req: Request, res: Response) => {
       });
     }
   } catch (error) {
-    console.error('Error in collect-all:', error);
+    logger.error('Error in collect-all:', { error });
     res.status(500).json({
       success: false,
       error: 'Failed to start batch collection'
