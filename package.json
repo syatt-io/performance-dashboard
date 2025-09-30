@@ -23,7 +23,8 @@
     "setup:db": "node scripts/setup-db.js",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "pre-deploy": "./scripts/pre-deploy.sh"
   },
   "keywords": [],
   "author": "",

@@ -3,6 +3,10 @@ import express from 'express';
 import sitesRouter from '../../src/routes/sites';
 import { prisma } from '../../src/services/database';
 
+// Test UUIDs that match UUID v4 format
+const VALID_UUID = '12345678-1234-4234-b234-123456789012';
+const ANOTHER_UUID = '87654321-4321-4321-a321-987654321098';
+
 // Mock dependencies
 jest.mock('../../src/services/database', () => ({
   prisma: {
@@ -104,10 +108,10 @@ describe('Sites API Routes', () => {
     it('should reject missing required fields', async () => {
       const response = await request(app)
         .post('/api/sites')
-        .send({ name: 'Test' });
+        .send({ name: 'Test Site' });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toBe('Name and URL are required');
+      expect(response.body.error).toBe('URL is required and must be a string');
     });
 
     it('should handle duplicate site URLs', async () => {
@@ -125,7 +129,7 @@ describe('Sites API Routes', () => {
   describe('GET /api/sites/:id', () => {
     it('should return a specific site', async () => {
       const mockSite = {
-        id: '123',
+        id: VALID_UUID,
         name: 'Test Site',
         url: 'https://test.com',
         _count: { metrics: 5 },
@@ -133,7 +137,7 @@ describe('Sites API Routes', () => {
 
       (prisma.site.findUnique as jest.Mock).mockResolvedValue(mockSite);
 
-      const response = await request(app).get('/api/sites/123');
+      const response = await request(app).get(`/api/sites/${VALID_UUID}`);
 
       expect(response.status).toBe(200);
       expect(response.body.name).toBe('Test Site');
@@ -142,17 +146,24 @@ describe('Sites API Routes', () => {
     it('should return 404 for non-existent site', async () => {
       (prisma.site.findUnique as jest.Mock).mockResolvedValue(null);
 
-      const response = await request(app).get('/api/sites/999');
+      const response = await request(app).get(`/api/sites/${ANOTHER_UUID}`);
 
       expect(response.status).toBe(404);
       expect(response.body.error).toBe('Site not found');
+    });
+
+    it('should return 400 for invalid UUID format', async () => {
+      const response = await request(app).get('/api/sites/invalid-uuid');
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toContain('Invalid');
     });
   });
 
   describe('PUT /api/sites/:id', () => {
     it('should update a site', async () => {
       const updatedSite = {
-        id: '123',
+        id: VALID_UUID,
         name: 'Updated Name',
         url: 'https://test.com',
       };
@@ -160,7 +171,7 @@ describe('Sites API Routes', () => {
       (prisma.site.update as jest.Mock).mockResolvedValue(updatedSite);
 
       const response = await request(app)
-        .put('/api/sites/123')
+        .put(`/api/sites/${VALID_UUID}`)
         .send({ name: 'Updated Name' });
 
       expect(response.status).toBe(200);
@@ -171,7 +182,7 @@ describe('Sites API Routes', () => {
       (prisma.site.update as jest.Mock).mockRejectedValue({ code: 'P2025' });
 
       const response = await request(app)
-        .put('/api/sites/999')
+        .put(`/api/sites/${ANOTHER_UUID}`)
         .send({ name: 'Test' });
 
       expect(response.status).toBe(404);
@@ -183,7 +194,7 @@ describe('Sites API Routes', () => {
     it('should delete a site', async () => {
       (prisma.site.delete as jest.Mock).mockResolvedValue({});
 
-      const response = await request(app).delete('/api/sites/123');
+      const response = await request(app).delete(`/api/sites/${VALID_UUID}`);
 
       expect(response.status).toBe(200);
       expect(response.body.message).toBe('Site deleted successfully');
@@ -192,7 +203,7 @@ describe('Sites API Routes', () => {
     it('should return 404 for non-existent site', async () => {
       (prisma.site.delete as jest.Mock).mockRejectedValue({ code: 'P2025' });
 
-      const response = await request(app).delete('/api/sites/999');
+      const response = await request(app).delete(`/api/sites/${ANOTHER_UUID}`);
 
       expect(response.status).toBe(404);
       expect(response.body.error).toBe('Site not found');

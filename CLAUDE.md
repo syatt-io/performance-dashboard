@@ -71,6 +71,7 @@ npm run format         # Format code with Prettier
 npm run prisma:generate # Generate Prisma client
 npm run prisma:migrate  # Run database migrations
 npm run prisma:migrate:deploy  # Deploy migrations (production-safe)
+npm run pre-deploy      # Run all pre-deployment checks (tests, lint, build)
 
 # Development URLs
 API Server:     http://localhost:3000/api
@@ -171,3 +172,4 @@ curl -X POST http://localhost:3000/api/metrics/cleanup-stuck-jobs # Clean up stu
 - Sanitize all user inputs for dashboard filters
 - never rever to using another API for performance testing without asking for approval
 - for furure reference, build/deploy takes about 8 minutes
+- before every deploy, run pre-deploy script
