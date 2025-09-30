@@ -6,6 +6,7 @@ import { performanceCollector } from '../services/lighthouse';
 import { scheduleAllSites, addPerformanceJob, cleanStuckJobs } from '../services/queue';
 import { triggerManualRun } from '../scheduler';
 import { logger } from '../utils/logger';
+import { metricsCollectionLimiter } from '../middleware/rateLimit';
 
 const router = Router();
 
@@ -100,7 +101,8 @@ router.get('/sites/:siteId', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/sites/:siteId/collect', async (req: Request, res: Response) => {
+// Apply restrictive rate limit (10 req/hour) to metric collection endpoints
+router.post('/sites/:siteId/collect', metricsCollectionLimiter, async (req: Request, res: Response) => {
   try {
     logger.info(`📡 Collection endpoint called for site: ${req.params.siteId}`);
     const { siteId } = req.params;
@@ -706,7 +708,7 @@ router.post('/cleanup-stuck-jobs', async (req: Request, res: Response) => {
 });
 
 // Collect metrics for all sites using queue system
-router.post('/collect-all', async (req: Request, res: Response) => {
+router.post('/collect-all', metricsCollectionLimiter, async (req: Request, res: Response) => {
   try {
     logger.info('🚀 Starting batch collection for all sites using queue...');
 
