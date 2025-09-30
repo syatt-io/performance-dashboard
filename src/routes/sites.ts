@@ -3,6 +3,7 @@ import type { Request, Response } from 'express';
 import { prisma } from '../services/database';
 import { encryptCredentials, decryptCredentials } from '../utils/encryption';
 import { validateSiteCreation, validateSiteUpdate, validateUuidParam } from '../middleware/validation';
+import { logger } from '../utils/logger';
 
 const router = Router();
 
@@ -27,7 +28,7 @@ router.get('/', async (req: Request, res: Response) => {
       total: sanitizedSites.length
     });
   } catch (error) {
-    console.error('Error fetching sites:', error);
+    logger.error('Error fetching sites', { error });
     res.status(500).json({ error: 'Failed to fetch sites' });
   }
 });
@@ -61,7 +62,7 @@ router.post('/', validateSiteCreation, async (req: Request, res: Response) => {
 
     res.status(201).json(safeSite);
   } catch (error: any) {
-    console.error('Error creating site:', error);
+    logger.error('Error creating site:', error);
     if (error.code === 'P2002') {
       return res.status(400).json({ error: 'Site with this URL already exists' });
     }
@@ -91,7 +92,7 @@ router.get('/:id', validateUuidParam('id'), async (req: Request, res: Response) 
     // Return site directly (no sensitive fields to remove)
     res.json(site);
   } catch (error) {
-    console.error('Error fetching site:', error);
+    logger.error('Error fetching site:', error);
     res.status(500).json({ error: 'Failed to fetch site' });
   }
 });
@@ -114,7 +115,7 @@ router.put('/:id', validateUuidParam('id'), validateSiteUpdate, async (req: Requ
 
     res.json(site);
   } catch (error: any) {
-    console.error('Error updating site:', error);
+    logger.error('Error updating site:', error);
     if (error.code === 'P2025') {
       return res.status(404).json({ error: 'Site not found' });
     }
@@ -132,7 +133,7 @@ router.delete('/:id', validateUuidParam('id'), async (req: Request, res: Respons
 
     res.json({ message: 'Site deleted successfully' });
   } catch (error: any) {
-    console.error('Error deleting site:', error);
+    logger.error('Error deleting site:', error);
     if (error.code === 'P2025') {
       return res.status(404).json({ error: 'Site not found' });
     }

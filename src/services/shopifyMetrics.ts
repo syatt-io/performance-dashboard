@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import { prisma } from './database';
 import { performanceCollector } from './lighthouse';
 import { decryptCredentials } from '../utils/encryption';
@@ -63,11 +64,11 @@ export class ShopifyMetricsCollector {
     collectionUrl: string,
     collectionName?: string
   ): Promise<ShopifyPageMetrics> {
-    console.log(`🛍️ Collecting metrics for collection: ${collectionName || collectionUrl}`);
+    logger.info(`🛍️ Collecting metrics for collection: ${collectionName || collectionUrl}`);
 
     try {
       // Use WebPageTest API ONLY (no fallbacks) to get performance metrics
-      console.log(`🛍️🛍️🛍️ SHOPIFY METRICS CALLING collectMetrics for ${collectionUrl} 🛍️🛍️🛍️`);
+      logger.info(`🛍️🛍️🛍️ SHOPIFY METRICS CALLING collectMetrics for ${collectionUrl} 🛍️🛍️🛍️`);
       const metrics = await performanceCollector.collectMetrics(collectionUrl, {
         deviceType: 'mobile'
       });
@@ -99,7 +100,7 @@ export class ShopifyMetricsCollector {
       });
 
       // Also collect desktop metrics
-      console.log(`🛍️🛍️🛍️ SHOPIFY METRICS CALLING collectMetrics for ${collectionUrl} (DESKTOP) 🛍️🛍️🛍️`);
+      logger.info(`🛍️🛍️🛍️ SHOPIFY METRICS CALLING collectMetrics for ${collectionUrl} (DESKTOP) 🛍️🛍️🛍️`);
       const desktopMetrics = await performanceCollector.collectMetrics(collectionUrl, {
         deviceType: 'desktop'
       });
@@ -128,7 +129,7 @@ export class ShopifyMetricsCollector {
         });
       }
 
-      console.log(`✅ Collection metrics collected - LCP: ${metrics.lcp?.toFixed(2)}s, Score: ${metrics.performance}/100`);
+      logger.info(`✅ Collection metrics collected - LCP: ${metrics.lcp?.toFixed(2)}s, Score: ${metrics.performance}/100`);
 
       return {
         url: collectionUrl,
@@ -140,7 +141,7 @@ export class ShopifyMetricsCollector {
       };
 
     } catch (error) {
-      console.error(`❌ Failed to collect collection metrics:`, error);
+      logger.error(`❌ Failed to collect collection metrics:`, error);
       throw error;
     }
   }
@@ -153,11 +154,11 @@ export class ShopifyMetricsCollector {
     productUrl: string,
     productName?: string
   ): Promise<ShopifyPageMetrics> {
-    console.log(`🛍️ Collecting metrics for product: ${productName || productUrl}`);
+    logger.info(`🛍️ Collecting metrics for product: ${productName || productUrl}`);
 
     try {
       // Collect mobile metrics using WebPageTest API ONLY
-      console.log(`🛒🛒🛒 SHOPIFY METRICS CALLING collectMetrics for PRODUCT ${productUrl} (MOBILE) 🛒🛒🛒`);
+      logger.info(`🛒🛒🛒 SHOPIFY METRICS CALLING collectMetrics for PRODUCT ${productUrl} (MOBILE) 🛒🛒🛒`);
       const metrics = await performanceCollector.collectMetrics(productUrl, {
         deviceType: 'mobile'
       });
@@ -190,7 +191,7 @@ export class ShopifyMetricsCollector {
       });
 
       // Also collect desktop metrics using WebPageTest API ONLY
-      console.log(`🛒🛒🛒 SHOPIFY METRICS CALLING collectMetrics for PRODUCT ${productUrl} (DESKTOP) 🛒🛒🛒`);
+      logger.info(`🛒🛒🛒 SHOPIFY METRICS CALLING collectMetrics for PRODUCT ${productUrl} (DESKTOP) 🛒🛒🛒`);
       const desktopMetrics = await performanceCollector.collectMetrics(productUrl, {
         deviceType: 'desktop'
       });
@@ -220,7 +221,7 @@ export class ShopifyMetricsCollector {
         });
       }
 
-      console.log(`✅ Product metrics collected - LCP: ${metrics.lcp?.toFixed(2)}s, Score: ${metrics.performance}/100`);
+      logger.info(`✅ Product metrics collected - LCP: ${metrics.lcp?.toFixed(2)}s, Score: ${metrics.performance}/100`);
 
       return {
         url: productUrl,
@@ -231,7 +232,7 @@ export class ShopifyMetricsCollector {
       };
 
     } catch (error) {
-      console.error(`❌ Failed to collect product metrics:`, error);
+      logger.error(`❌ Failed to collect product metrics:`, error);
       throw error;
     }
   }
@@ -248,13 +249,13 @@ export class ShopifyMetricsCollector {
       throw new Error(`Site ${siteId} not found`);
     }
 
-    console.log(`🛍️ Starting Shopify page metrics collection for ${site.name}`);
+    logger.info(`🛍️ Starting Shopify page metrics collection for ${site.name}`);
 
     // Site doesn't have shopifyDomain field in current schema
     const shopifyDomain = this.getShopifyDomain(site.url);
 
     if (!shopifyDomain) {
-      console.warn(`⚠️ Not a Shopify store or domain not detected for ${site.url}`);
+      logger.warn(`⚠️ Not a Shopify store or domain not detected for ${site.url}`);
       return;
     }
 
@@ -326,11 +327,11 @@ export class ShopifyMetricsCollector {
         await new Promise(resolve => setTimeout(resolve, 2000));
 
       } catch (error) {
-        console.error(`Failed to collect metrics for ${page.name}:`, error);
+        logger.error(`Failed to collect metrics for ${page.name}:`, error);
       }
     }
 
-    console.log(`✅ Shopify page metrics collection completed for ${site.name}`);
+    logger.info(`✅ Shopify page metrics collection completed for ${site.name}`);
   }
 
   /**

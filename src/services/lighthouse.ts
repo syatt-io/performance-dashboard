@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import { prisma } from './database';
 
 import { shopifyMetricsCollector } from './shopifyMetrics';
@@ -50,7 +51,7 @@ export class PerformanceCollector {
     try {
       // Check if service account is provided via base64 environment variable
       if (process.env.GOOGLE_SERVICE_ACCOUNT_BASE64) {
-        console.log('🔐 Using Google Service Account from environment variable');
+        logger.info('🔐 Using Google Service Account from environment variable');
 
         const fs = require('fs');
         const path = require('path');
@@ -61,43 +62,43 @@ export class PerformanceCollector {
         fs.writeFileSync(serviceAccountPath, serviceAccountJson);
         process.env.GOOGLE_APPLICATION_CREDENTIALS = serviceAccountPath;
 
-        console.log('✅ Service account decoded and saved to temp file');
+        logger.info('✅ Service account decoded and saved to temp file');
       }
 
       // Check if service account credentials are available
       if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-        console.log('📝 No service account credentials found, checking for API key...');
+        logger.info('📝 No service account credentials found, checking for API key...');
         return null;
       }
 
-      console.log('🔐 Attempting Google Service Account authentication (direct method)');
-      console.log(`📁 Service account file: ${process.env.GOOGLE_APPLICATION_CREDENTIALS}`);
+      logger.info('🔐 Attempting Google Service Account authentication (direct method)');
+      logger.info(`📁 Service account file: ${process.env.GOOGLE_APPLICATION_CREDENTIALS}`);
 
       // Check if file exists
       const fs = require('fs');
       if (!fs.existsSync(process.env.GOOGLE_APPLICATION_CREDENTIALS)) {
-        console.error('❌ Service account file does not exist:', process.env.GOOGLE_APPLICATION_CREDENTIALS);
+        logger.error('❌ Service account file does not exist:', process.env.GOOGLE_APPLICATION_CREDENTIALS);
         return null;
       }
 
       // Try direct service account authentication without OAuth scopes
       // PageSpeed Insights API may work better with default service account auth
-      console.log('🔄 Attempting direct service account authentication...');
+      logger.info('🔄 Attempting direct service account authentication...');
 
       const auth = new GoogleAuth({
         keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
         // PageSpeed API doesn't require OAuth scopes for service accounts
       });
 
-      console.log('🔄 Getting auth client...');
+      logger.info('🔄 Getting auth client...');
       const client = await auth.getClient();
 
-      console.log('🔄 Getting access token...');
+      logger.info('🔄 Getting access token...');
       const accessTokenResponse = await client.getAccessToken();
 
       // Get project info from the auth client
       const projectId = await auth.getProjectId();
-      console.log('🔍 Service account project info:', {
+      logger.info('🔍 Service account project info:', {
         projectId: projectId,
         hasToken: !!accessTokenResponse.token,
         tokenLength: accessTokenResponse.token?.length || 0,
@@ -107,39 +108,39 @@ export class PerformanceCollector {
       // Also read the service account file to see what project it contains
       try {
         const serviceAccountData = JSON.parse(fs.readFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS, 'utf8'));
-        console.log('📋 Service account file project_id:', serviceAccountData.project_id);
-        console.log('📋 Service account client_email:', serviceAccountData.client_email);
+        logger.info('📋 Service account file project_id:', serviceAccountData.project_id);
+        logger.info('📋 Service account client_email:', serviceAccountData.client_email);
       } catch (error) {
         const err = error as Error;
-        console.warn('⚠️ Could not read service account file for debugging:', err.message);
+        logger.warn('⚠️ Could not read service account file for debugging:', err.message);
       }
 
       if (accessTokenResponse.token) {
-        console.log('✅ Successfully obtained service account access token (direct method)');
-        console.log(`🔑 Token length: ${accessTokenResponse.token.length} characters`);
-        console.log(`🔑 Token prefix: ${accessTokenResponse.token.substring(0, 20)}...`);
+        logger.info('✅ Successfully obtained service account access token (direct method)');
+        logger.info(`🔑 Token length: ${accessTokenResponse.token.length} characters`);
+        logger.info(`🔑 Token prefix: ${accessTokenResponse.token.substring(0, 20)}...`);
         return accessTokenResponse.token;
       } else {
-        console.error('❌ Failed to obtain access token from service account - no token in response');
+        logger.error('❌ Failed to obtain access token from service account - no token in response');
         return null;
       }
     } catch (error) {
       const err = error as any;
-      console.error('❌ Service account authentication failed with detailed error:');
-      console.error('📝 Error name:', err.name);
-      console.error('📝 Error message:', err.message);
+      logger.error('❌ Service account authentication failed with detailed error:');
+      logger.error('📝 Error name:', err.name);
+      logger.error('📝 Error message:', err.message);
       if (err.code) {
-        console.error('📝 Error code:', err.code);
+        logger.error('📝 Error code:', err.code);
       }
-      console.log('📝 Falling back to API key or free tier...');
+      logger.info('📝 Falling back to API key or free tier...');
       return null;
     }
   }
 
   async collectMetricsLocally(url: string, config: LighthouseConfig = { deviceType: 'mobile' }): Promise<LighthouseResult> {
-    console.log(`🖥️ Starting local Lighthouse CLI collection for ${url} (${config.deviceType})`);
-    console.log(`📌 Using local Lighthouse as fallback/primary method`);
-    console.log(`⏰ Timestamp: ${new Date().toISOString()}`);
+    logger.info(`🖥️ Starting local Lighthouse CLI collection for ${url} (${config.deviceType})`);
+    logger.info(`📌 Using local Lighthouse as fallback/primary method`);
+    logger.info(`⏰ Timestamp: ${new Date().toISOString()}`);
 
     try {
       // Use Lighthouse CLI for better compatibility
@@ -153,19 +154,19 @@ export class PerformanceCollector {
       let chromeAvailable = false;
       try {
         await execAsync(`test -f "${chromePath}"`);
-        console.log(`✅ Chrome found at ${chromePath}`);
+        logger.info(`✅ Chrome found at ${chromePath}`);
         chromeAvailable = true;
       } catch {
-        console.warn(`⚠️ Chrome not found at default path, trying system Chrome`);
+        logger.warn(`⚠️ Chrome not found at default path, trying system Chrome`);
         // Try to find Chrome in PATH
         try {
           const { stdout: whichChrome } = await execAsync('which google-chrome || which chromium || which chrome');
           if (whichChrome.trim()) {
-            console.log(`✅ Alternative Chrome found at: ${whichChrome.trim()}`);
+            logger.info(`✅ Alternative Chrome found at: ${whichChrome.trim()}`);
             chromeAvailable = true;
           }
         } catch {
-          console.error(`❌ No Chrome/Chromium installation found in system PATH`);
+          logger.error(`❌ No Chrome/Chromium installation found in system PATH`);
         }
       }
 
@@ -174,16 +175,16 @@ export class PerformanceCollector {
       try {
         const { stdout: versionOutput } = await execAsync('npx lighthouse --version');
         lighthouseVersion = versionOutput.trim();
-        console.log(`✅ Lighthouse version: ${lighthouseVersion}`);
+        logger.info(`✅ Lighthouse version: ${lighthouseVersion}`);
       } catch (versionError) {
-        console.error(`❌ Failed to get Lighthouse version:`, versionError);
+        logger.error(`❌ Failed to get Lighthouse version:`, versionError);
         throw new Error('Lighthouse CLI not available. Please ensure Lighthouse is installed.');
       }
 
       const command = `export CHROME_PATH="${chromePath}" && npx lighthouse "${url}" --only-categories=performance --output=json --chrome-flags="--headless" --emulated-form-factor=${formFactor} ${throttling} --quiet`;
 
-      console.log(`🔧 Running Lighthouse command...`);
-      console.log(`📝 Command details: formFactor=${formFactor}, throttling=${throttling}`);
+      logger.info(`🔧 Running Lighthouse command...`);
+      logger.info(`📝 Command details: formFactor=${formFactor}, throttling=${throttling}`);
 
       const startTime = Date.now();
       const { stdout, stderr } = await execAsync(command, {
@@ -192,11 +193,11 @@ export class PerformanceCollector {
       });
 
       const executionTime = Date.now() - startTime;
-      console.log(`⏱️ Lighthouse execution completed in ${(executionTime / 1000).toFixed(2)} seconds`);
+      logger.info(`⏱️ Lighthouse execution completed in ${(executionTime / 1000).toFixed(2)} seconds`);
 
       // Log any stderr warnings (non-fatal)
       if (stderr && stderr.trim()) {
-        console.warn(`⚠️ Lighthouse warnings: ${stderr.trim()}`);
+        logger.warn(`⚠️ Lighthouse warnings: ${stderr.trim()}`);
       }
 
       // Validate JSON output
@@ -205,24 +206,24 @@ export class PerformanceCollector {
         lhr = JSON.parse(stdout);
       } catch (parseError) {
         const err = parseError as Error;
-        console.error(`❌ Failed to parse Lighthouse output as JSON`);
-        console.error(`📝 Raw output (first 500 chars): ${stdout.substring(0, 500)}`);
+        logger.error(`❌ Failed to parse Lighthouse output as JSON`);
+        logger.error(`📝 Raw output (first 500 chars): ${stdout.substring(0, 500)}`);
         throw new Error(`Invalid Lighthouse output format: ${err.message}`);
       }
       const audits = lhr.audits;
 
       if (!audits) {
-        console.error(`❌ No audits property found in Lighthouse result`);
-        console.error(`📝 Lighthouse result keys: ${Object.keys(lhr || {}).join(', ')}`);
+        logger.error(`❌ No audits property found in Lighthouse result`);
+        logger.error(`📝 Lighthouse result keys: ${Object.keys(lhr || {}).join(', ')}`);
         throw new Error('No audits found in Lighthouse result');
       }
 
       // Log available audit types for debugging
-      console.log(`📋 Available audits: ${Object.keys(audits).length} audit types`);
+      logger.info(`📋 Available audits: ${Object.keys(audits).length} audit types`);
       const coreAudits = ['largest-contentful-paint', 'cumulative-layout-shift', 'first-contentful-paint', 'speed-index'];
       const missingAudits = coreAudits.filter(audit => !audits[audit]);
       if (missingAudits.length > 0) {
-        console.warn(`⚠️ Missing expected audits: ${missingAudits.join(', ')}`);
+        logger.warn(`⚠️ Missing expected audits: ${missingAudits.join(', ')}`);
       }
 
       // Extract Core Web Vitals and performance metrics (same format as PageSpeed API)
@@ -237,8 +238,8 @@ export class PerformanceCollector {
 
       // Validate critical metrics
       if (lcp === undefined && fcp === undefined && performance === undefined) {
-        console.error(`❌ No valid performance metrics extracted from Lighthouse result`);
-        console.error(`📝 Audit values: LCP=${lcp}, FCP=${fcp}, CLS=${cls}, Performance=${performance}`);
+        logger.error(`❌ No valid performance metrics extracted from Lighthouse result`);
+        logger.error(`📝 Audit values: LCP=${lcp}, FCP=${fcp}, CLS=${cls}, Performance=${performance}`);
         throw new Error('Failed to extract any valid performance metrics from Lighthouse result');
       }
 
@@ -275,7 +276,7 @@ export class PerformanceCollector {
         requestCount: audits['third-party-summary']?.details?.items?.length || 0
       };
 
-      console.log(`✅ Local Lighthouse CLI metrics - LCP: ${lcp?.toFixed(2)}s, CLS: ${cls?.toFixed(3)}, Performance: ${performance}/100`);
+      logger.info(`✅ Local Lighthouse CLI metrics - LCP: ${lcp?.toFixed(2)}s, CLS: ${cls?.toFixed(3)}, Performance: ${performance}/100`);
 
       return {
         success: true,
@@ -304,7 +305,7 @@ export class PerformanceCollector {
       };
 
     } catch (error) {
-      console.error(`❌ Local Lighthouse CLI collection failed for ${url}:`, error);
+      logger.error(`❌ Local Lighthouse CLI collection failed for ${url}:`, error);
 
       // Provide specific error messages based on the error type
       let errorMessage = 'Unknown error occurred';
@@ -338,9 +339,9 @@ export class PerformanceCollector {
         }
       }
 
-      console.error(`📝 Error type: ${errorDetails.type || 'general'}`);
-      console.error(`📝 Error message: ${errorMessage}`);
-      console.error(`📝 Stack trace:`, error instanceof Error ? error.stack : 'No stack trace available');
+      logger.error(`📝 Error type: ${errorDetails.type || 'general'}`);
+      logger.error(`📝 Error message: ${errorMessage}`);
+      logger.error(`📝 Stack trace:`, error instanceof Error ? error.stack : 'No stack trace available');
 
       return {
         success: false,
@@ -362,9 +363,14 @@ export class PerformanceCollector {
   // If WebPageTest is needed in the future, see git history for implementation
 
   async collectMetrics(url: string, config: LighthouseConfig = { deviceType: 'mobile' }): Promise<LighthouseResult> {
-    console.log(`📊 Using PageSpeed Insights API with Service Account Authentication`);
-    console.log(`🔑 PageSpeed API Key: ${process.env.PAGESPEED_API_KEY ? 'Available' : 'Not set'}`);
-    console.log(`🔑 Service Account: ${process.env.GOOGLE_APPLICATION_CREDENTIALS ? 'Available' : 'Not set'}`);
+    const hasApiKey = !!process.env.PAGESPEED_API_KEY;
+    const hasServiceAccount = !!process.env.GOOGLE_APPLICATION_CREDENTIALS;
+
+    logger.info('Using PageSpeed Insights API', {
+      hasApiKey,
+      hasServiceAccount,
+      deviceType: config.deviceType
+    });
 
     // Use PageSpeed Insights with service account authentication (25k requests/day limit)
     const result = await this.collectMetricsPageSpeed(url, config);
@@ -378,8 +384,8 @@ export class PerformanceCollector {
   }
 
   async collectMetricsPageSpeed(url: string, config: LighthouseConfig = { deviceType: 'mobile' }): Promise<LighthouseResult> {
-    console.log(`📊 Starting PageSpeed Insights collection for ${url} (${config.deviceType})`);
-    console.log(`🔑 Using PageSpeed Insights API (not simulated data)`);
+    logger.info(`📊 Starting PageSpeed Insights collection for ${url} (${config.deviceType})`);
+    logger.info(`🔑 Using PageSpeed Insights API (not simulated data)`);
 
     try {
       // Use PageSpeed Insights API instead of local Lighthouse
@@ -404,18 +410,18 @@ export class PerformanceCollector {
         throw new Error('PAGESPEED_API_KEY environment variable is required');
       }
 
-      console.log('🔑 Using API Key authentication from syatt-io project');
-      console.log('📊 Quota: 25,000 requests/day with API key');
-      console.log(`🎯 API key prefix: ${apiKey.substring(0, 15)}...`);
+      logger.info('🔑 Using API Key authentication from syatt-io project');
+      logger.info('📊 Quota: 25,000 requests/day with API key');
+      logger.info(`🎯 API key prefix: ${apiKey.substring(0, 15)}...`);
       params.append('key', apiKey);
 
       const apiUrl = `${baseUrl}?${params.toString()}`;
 
-      console.log('⚡ Calling PageSpeed Insights API...');
-      console.log(`📍 API URL: ${baseUrl}`);
-      console.log(`📍 Full API URL: ${apiUrl}`);
-      console.log(`📍 Request headers:`, headers);
-      console.log(`📍 URL parameters:`, Object.fromEntries(params));
+      logger.info('⚡ Calling PageSpeed Insights API...');
+      logger.info(`📍 API URL: ${baseUrl}`);
+      logger.info(`📍 Full API URL: ${apiUrl}`);
+      logger.info(`📍 Request headers:`, headers);
+      logger.info(`📍 URL parameters:`, Object.fromEntries(params));
 
       const response = await fetch(apiUrl, { headers });
 
@@ -427,31 +433,31 @@ export class PerformanceCollector {
       const data = await response.json();
 
       // Debug: Log raw API response structure
-      console.log('🔍 Raw PageSpeed API response for debugging:');
-      console.log('- Response status:', response.status);
-      console.log('- Has loadingExperience:', !!data.loadingExperience);
-      console.log('- Has originLoadingExperience:', !!data.originLoadingExperience);
-      console.log('- Has lighthouseResult:', !!data.lighthouseResult);
-      console.log('- Performance score (raw):', data.lighthouseResult?.categories?.performance?.score);
-      console.log('- Field data availability:', {
+      logger.info('🔍 Raw PageSpeed API response for debugging:');
+      logger.info('- Response status:', response.status);
+      logger.info('- Has loadingExperience:', !!data.loadingExperience);
+      logger.info('- Has originLoadingExperience:', !!data.originLoadingExperience);
+      logger.info('- Has lighthouseResult:', !!data.lighthouseResult);
+      logger.info('- Performance score (raw):', data.lighthouseResult?.categories?.performance?.score);
+      logger.info('- Field data availability:', {
         LARGEST_CONTENTFUL_PAINT_MS: !!data.loadingExperience?.metrics?.LARGEST_CONTENTFUL_PAINT_MS,
         FIRST_CONTENTFUL_PAINT_MS: !!data.loadingExperience?.metrics?.FIRST_CONTENTFUL_PAINT_MS,
         CUMULATIVE_LAYOUT_SHIFT_SCORE: !!data.loadingExperience?.metrics?.CUMULATIVE_LAYOUT_SHIFT_SCORE,
         INTERACTION_TO_NEXT_PAINT: !!data.loadingExperience?.metrics?.INTERACTION_TO_NEXT_PAINT
       });
-      console.log('- Lab audits availability:', {
+      logger.info('- Lab audits availability:', {
         'largest-contentful-paint': !!data.lighthouseResult?.audits?.['largest-contentful-paint'],
         'cumulative-layout-shift': !!data.lighthouseResult?.audits?.['cumulative-layout-shift'],
         'first-contentful-paint': !!data.lighthouseResult?.audits?.['first-contentful-paint'],
         'speed-index': !!data.lighthouseResult?.audits?.['speed-index']
       });
       if (data.loadingExperience?.metrics) {
-        console.log('- Field LCP (ms):', data.loadingExperience.metrics.LARGEST_CONTENTFUL_PAINT_MS?.percentile);
-        console.log('- Field CLS (0-100):', data.loadingExperience.metrics.CUMULATIVE_LAYOUT_SHIFT_SCORE?.percentile);
+        logger.info('- Field LCP (ms):', data.loadingExperience.metrics.LARGEST_CONTENTFUL_PAINT_MS?.percentile);
+        logger.info('- Field CLS (0-100):', data.loadingExperience.metrics.CUMULATIVE_LAYOUT_SHIFT_SCORE?.percentile);
       }
       if (data.lighthouseResult?.audits) {
-        console.log('- Lab LCP (ms):', data.lighthouseResult.audits['largest-contentful-paint']?.numericValue);
-        console.log('- Lab CLS (0-1):', data.lighthouseResult.audits['cumulative-layout-shift']?.numericValue);
+        logger.info('- Lab LCP (ms):', data.lighthouseResult.audits['largest-contentful-paint']?.numericValue);
+        logger.info('- Lab CLS (0-1):', data.lighthouseResult.audits['cumulative-layout-shift']?.numericValue);
       }
 
       if (!data.lighthouseResult) {
@@ -547,10 +553,10 @@ export class PerformanceCollector {
         cls: fieldData?.CUMULATIVE_LAYOUT_SHIFT_SCORE?.percentile !== undefined ? 'field' : 'lab',
         fcp: fieldData?.FIRST_CONTENTFUL_PAINT_MS?.percentile ? 'field' : 'lab'
       };
-      console.log(`✅ PageSpeed Insights metrics (${dataSource}) - LCP: ${lcp?.toFixed(2)}s (${dataSourceDetails.lcp}), CLS: ${cls?.toFixed(3)} (${dataSourceDetails.cls}), Performance: ${performance}/100`);
-      console.log(`🖼️ Image optimization score: ${imageOptimizationScore}/100 (${imageOptimization.unoptimizedImages} unoptimized images)`);
-      console.log(`📦 Theme assets: ${Math.round(themeAssets.totalByteWeight / 1024)}KB total, ${themeAssets.renderBlockingResources} blocking resources`);
-      console.log(`📊 Raw field data - LCP: ${fieldData?.LARGEST_CONTENTFUL_PAINT_MS?.percentile}ms, CLS: ${fieldData?.CUMULATIVE_LAYOUT_SHIFT_SCORE?.percentile}, FCP: ${fieldData?.FIRST_CONTENTFUL_PAINT_MS?.percentile}ms`);
+      logger.info(`✅ PageSpeed Insights metrics (${dataSource}) - LCP: ${lcp?.toFixed(2)}s (${dataSourceDetails.lcp}), CLS: ${cls?.toFixed(3)} (${dataSourceDetails.cls}), Performance: ${performance}/100`);
+      logger.info(`🖼️ Image optimization score: ${imageOptimizationScore}/100 (${imageOptimization.unoptimizedImages} unoptimized images)`);
+      logger.info(`📦 Theme assets: ${Math.round(themeAssets.totalByteWeight / 1024)}KB total, ${themeAssets.renderBlockingResources} blocking resources`);
+      logger.info(`📊 Raw field data - LCP: ${fieldData?.LARGEST_CONTENTFUL_PAINT_MS?.percentile}ms, CLS: ${fieldData?.CUMULATIVE_LAYOUT_SHIFT_SCORE?.percentile}, FCP: ${fieldData?.FIRST_CONTENTFUL_PAINT_MS?.percentile}ms`);
 
       return {
         success: true,
@@ -581,7 +587,7 @@ export class PerformanceCollector {
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      console.error(`❌ PageSpeed Insights collection failed for ${url}:`, error);
+      logger.error(`❌ PageSpeed Insights collection failed for ${url}:`, error);
 
       // TESTING: Local Lighthouse fallback DISABLED - service account authentication only
       // const errorString = String(error);
@@ -597,32 +603,32 @@ export class PerformanceCollector {
       //                      errorString.includes('Quota exceeded');
 
       // if (shouldFallback) {
-      //   console.log(`🔄 PageSpeed API quota/auth issue detected, falling back to local Lighthouse...`);
-      //   console.log(`📝 Original error was: ${errorMessage}`);
-      //   console.log(`📊 Fallback reason: API quota exhausted or authentication issue`);
-      //   console.log(`⏰ Fallback initiated at: ${new Date().toISOString()}`);
+      //   logger.info(`🔄 PageSpeed API quota/auth issue detected, falling back to local Lighthouse...`);
+      //   logger.info(`📝 Original error was: ${errorMessage}`);
+      //   logger.info(`📊 Fallback reason: API quota exhausted or authentication issue`);
+      //   logger.info(`⏰ Fallback initiated at: ${new Date().toISOString()}`);
 
       //   const localResult = await this.collectMetricsLocally(url, config);
 
       //   if (localResult.success) {
-      //     console.log(`✅ Local Lighthouse fallback succeeded`);
-      //     console.log(`📈 Metrics collected: LCP=${localResult.lcp?.toFixed(2)}s, CLS=${localResult.cls?.toFixed(3)}, Performance=${localResult.performance}/100`);
+      //     logger.info(`✅ Local Lighthouse fallback succeeded`);
+      //     logger.info(`📈 Metrics collected: LCP=${localResult.lcp?.toFixed(2)}s, CLS=${localResult.cls?.toFixed(3)}, Performance=${localResult.performance}/100`);
       //     // Add a note to the lighthouse data that this was a fallback
       //     if (localResult) {
       //       localResult.fallbackReason = 'PageSpeed API quota/auth error';
       //       localResult.originalError = errorMessage;
       //     }
       //   } else {
-      //     console.log(`❌ Local Lighthouse fallback also failed`);
-      //     console.log(`📝 Fallback error: ${localResult.error}`);
+      //     logger.info(`❌ Local Lighthouse fallback also failed`);
+      //     logger.info(`📝 Fallback error: ${localResult.error}`);
       //     // Include both errors in the response
       //     localResult.error = `Primary API failed: ${errorMessage}. Fallback also failed: ${localResult.error}`;
       //   }
       //   return localResult;
       // }
 
-      console.log(`❌ PageSpeed API failed, local Lighthouse fallback is DISABLED for testing`);
-      console.log(`📝 Original error: ${errorMessage}`);
+      logger.info(`❌ PageSpeed API failed, local Lighthouse fallback is DISABLED for testing`);
+      logger.info(`📝 Original error: ${errorMessage}`);
 
       // For other errors, return error result
       return {
@@ -640,19 +646,19 @@ export class PerformanceCollector {
 
   async collectAndStore(siteId: string, url: string, config: LighthouseConfig = { deviceType: 'mobile' }): Promise<string> {
     try {
-      console.log(`🔍 [${config.deviceType.toUpperCase()}] Starting performance collection for ${url}`);
+      logger.info(`🔍 [${config.deviceType.toUpperCase()}] Starting performance collection for ${url}`);
 
       // Use collectMetrics which now uses PageSpeed Insights with Service Account (25k requests/day)
-      console.log(`📡 [${config.deviceType.toUpperCase()}] Using PageSpeed Insights API with Service Account...`);
+      logger.info(`📡 [${config.deviceType.toUpperCase()}] Using PageSpeed Insights API with Service Account...`);
       const metrics = await this.collectMetrics(url, config);
 
       // Check if collection was successful
       if (!metrics.success) {
-        console.error(`❌ [${config.deviceType.toUpperCase()}] Failed to collect metrics for ${url}:`, metrics.error);
+        logger.error(`❌ [${config.deviceType.toUpperCase()}] Failed to collect metrics for ${url}:`, metrics.error);
         throw new Error(`Performance analysis failed: ${metrics.error}`);
       }
 
-      console.log(`💾 [${config.deviceType.toUpperCase()}] Storing metrics to database...`);
+      logger.info(`💾 [${config.deviceType.toUpperCase()}] Storing metrics to database...`);
 
       // Only store if we have real data
       const performanceMetric = await prisma.performanceMetric.create({
@@ -680,40 +686,40 @@ export class PerformanceCollector {
         }
       });
 
-      console.log(`✅ [${config.deviceType.toUpperCase()}] Successfully stored metrics for ${url} - DB ID: ${performanceMetric.id}`);
-      console.log(`📊 [${config.deviceType.toUpperCase()}] Metrics: LCP=${metrics.lcp?.toFixed(2)}s, CLS=${metrics.cls?.toFixed(3)}, Performance=${metrics.performance}/100`);
+      logger.info(`✅ [${config.deviceType.toUpperCase()}] Successfully stored metrics for ${url} - DB ID: ${performanceMetric.id}`);
+      logger.info(`📊 [${config.deviceType.toUpperCase()}] Metrics: LCP=${metrics.lcp?.toFixed(2)}s, CLS=${metrics.cls?.toFixed(3)}, Performance=${metrics.performance}/100`);
 
       // Log data source for debugging
       const testProvider = metrics?.testProvider || 'unknown';
       const dataSource = testProvider === 'webpagetest' ? 'WebPageTest API' :
                         testProvider === 'pagespeed' ? 'PageSpeed Insights API' :
                         metrics?.fallbackReason ? 'Local Lighthouse (fallback)' : 'Unknown';
-      console.log(`🔍 [${config.deviceType.toUpperCase()}] Data source: ${dataSource}`);
+      logger.info(`🔍 [${config.deviceType.toUpperCase()}] Data source: ${dataSource}`);
 
       // Log additional WebPageTest metrics if available
       if (testProvider === 'webpagetest') {
-        console.log(`📊 [${config.deviceType.toUpperCase()}] WebPageTest extras: Load=${metrics.loadTime?.toFixed(2)}s, Fully Loaded=${metrics.fullyLoadedTime?.toFixed(2)}s, Requests=${metrics.requests}`);
+        logger.info(`📊 [${config.deviceType.toUpperCase()}] WebPageTest extras: Load=${metrics.loadTime?.toFixed(2)}s, Fully Loaded=${metrics.fullyLoadedTime?.toFixed(2)}s, Requests=${metrics.requests}`);
         if (metrics?.testId) {
-          console.log(`🔗 [${config.deviceType.toUpperCase()}] Test URL: https://www.webpagetest.org/result/${metrics.testId}`);
+          logger.info(`🔗 [${config.deviceType.toUpperCase()}] Test URL: https://www.webpagetest.org/result/${metrics.testId}`);
         }
       }
 
       // Alert service disabled for now - tables don't exist
-      // console.log(`🚨 [${config.deviceType.toUpperCase()}] Processing through alert service...`);
+      // logger.info(`🚨 [${config.deviceType.toUpperCase()}] Processing through alert service...`);
       // await alertService.processMetric(siteId, { ... });
-      // console.log(`✅ [${config.deviceType.toUpperCase()}] Alert processing complete for ${url}`);
+      // logger.info(`✅ [${config.deviceType.toUpperCase()}] Alert processing complete for ${url}`);
 
       // Check if this is a Shopify store and collect additional metrics (only once per site per session)
-      console.log(`🔍 [${config.deviceType.toUpperCase()}] Calling checkAndCollectShopifyMetrics for site ${siteId}`);
+      logger.info(`🔍 [${config.deviceType.toUpperCase()}] Calling checkAndCollectShopifyMetrics for site ${siteId}`);
       await this.checkAndCollectShopifyMetrics(siteId);
 
       return performanceMetric.id;
 
     } catch (error) {
       const err = error as Error;
-      console.error(`❌ [${config.deviceType.toUpperCase()}] collectAndStore failed for ${url}:`, error);
-      console.error(`📝 [${config.deviceType.toUpperCase()}] Error type: ${err.constructor.name}`);
-      console.error(`📝 [${config.deviceType.toUpperCase()}] Error message: ${err.message}`);
+      logger.error(`❌ [${config.deviceType.toUpperCase()}] collectAndStore failed for ${url}:`, error);
+      logger.error(`📝 [${config.deviceType.toUpperCase()}] Error type: ${err.constructor.name}`);
+      logger.error(`📝 [${config.deviceType.toUpperCase()}] Error message: ${err.message}`);
       throw error;
     }
   }
@@ -727,43 +733,43 @@ export class PerformanceCollector {
       throw new Error(`Site ${siteId} not found or monitoring disabled`);
     }
 
-    console.log(`\n🎯 ================================================`);
-    console.log(`🎯 Starting collection for site: ${site.name}`);
-    console.log(`🌐 URL: ${site.url}`);
-    console.log(`🆔 Site ID: ${siteId}`);
-    console.log(`⏰ Start time: ${new Date().toISOString()}`);
-    console.log(`🎯 ================================================`);
+    logger.info(`\n🎯 ================================================`);
+    logger.info(`🎯 Starting collection for site: ${site.name}`);
+    logger.info(`🌐 URL: ${site.url}`);
+    logger.info(`🆔 Site ID: ${siteId}`);
+    logger.info(`⏰ Start time: ${new Date().toISOString()}`);
+    logger.info(`🎯 ================================================`);
 
     // Ensure default performance budgets exist for this site
     // TODO: Implement alertService
     // try {
     //   await alertService.createDefaultBudgets(siteId);
     // } catch (error) {
-    //   console.warn(`⚠️ Could not create default budgets for site ${siteId}:`, error);
+    //   logger.warn(`⚠️ Could not create default budgets for site ${siteId}:`, error);
     // }
 
     // Collect metrics for mobile and desktop separately to see which fails
     const results = [];
 
-    console.log(`📱 Starting MOBILE collection for ${site.name}...`);
+    logger.info(`📱 Starting MOBILE collection for ${site.name}...`);
     try {
       const mobileResult = await this.collectAndStore(siteId, site.url, { deviceType: 'mobile' });
-      console.log(`✅ MOBILE collection succeeded for ${site.name} - Metric ID: ${mobileResult}`);
+      logger.info(`✅ MOBILE collection succeeded for ${site.name} - Metric ID: ${mobileResult}`);
       results.push({ device: 'mobile', success: true, id: mobileResult });
     } catch (error) {
       const err = error as Error;
-      console.error(`❌ MOBILE collection failed for ${site.name}:`, error);
+      logger.error(`❌ MOBILE collection failed for ${site.name}:`, error);
       results.push({ device: 'mobile', success: false, error: err.message });
     }
 
-    console.log(`🖥️ Starting DESKTOP collection for ${site.name}...`);
+    logger.info(`🖥️ Starting DESKTOP collection for ${site.name}...`);
     try {
       const desktopResult = await this.collectAndStore(siteId, site.url, { deviceType: 'desktop' });
-      console.log(`✅ DESKTOP collection succeeded for ${site.name} - Metric ID: ${desktopResult}`);
+      logger.info(`✅ DESKTOP collection succeeded for ${site.name} - Metric ID: ${desktopResult}`);
       results.push({ device: 'desktop', success: true, id: desktopResult });
     } catch (error) {
       const err = error as Error;
-      console.error(`❌ DESKTOP collection failed for ${site.name}:`, error);
+      logger.error(`❌ DESKTOP collection failed for ${site.name}:`, error);
       results.push({ device: 'desktop', success: false, error: err.message });
     }
 
@@ -771,15 +777,15 @@ export class PerformanceCollector {
     const successCount = results.filter(r => r.success).length;
     const failureCount = results.filter(r => !r.success).length;
 
-    console.log(`\n📊 ================================================`);
-    console.log(`📊 Collection summary for ${site.name}:`);
-    console.log(`✅ Successful collections: ${successCount}/2`);
-    console.log(`❌ Failed collections: ${failureCount}/2`);
+    logger.info(`\n📊 ================================================`);
+    logger.info(`📊 Collection summary for ${site.name}:`);
+    logger.info(`✅ Successful collections: ${successCount}/2`);
+    logger.info(`❌ Failed collections: ${failureCount}/2`);
     if (failureCount > 0) {
-      console.log(`📝 Failures:`, results.filter(r => !r.success).map(r => `${r.device}: ${r.error}`));
+      logger.info(`📝 Failures:`, results.filter(r => !r.success).map(r => `${r.device}: ${r.error}`));
     }
-    console.log(`⏰ End time: ${new Date().toISOString()}`);
-    console.log(`📊 ================================================\n`);
+    logger.info(`⏰ End time: ${new Date().toISOString()}`);
+    logger.info(`📊 ================================================\n`);
 
     // Check if this is a Shopify store and collect additional metrics
     await this.checkAndCollectShopifyMetrics(siteId);
@@ -789,7 +795,7 @@ export class PerformanceCollector {
     // try {
     //   await alertService.checkForRegressions(siteId);
     // } catch (error) {
-    //   console.warn(`⚠️ Could not check for regressions for site ${siteId}:`, error);
+    //   logger.warn(`⚠️ Could not check for regressions for site ${siteId}:`, error);
     // }
   }
 
@@ -800,7 +806,7 @@ export class PerformanceCollector {
   private async checkAndCollectShopifyMetrics(siteId: string): Promise<void> {
     // Skip if already collected for this site in this session
     if (this.shopifyCollectedThisSession.has(siteId)) {
-      console.log(`🛍️ Shopify metrics already collected for site ${siteId} in this session, skipping`);
+      logger.info(`🛍️ Shopify metrics already collected for site ${siteId} in this session, skipping`);
       return;
     }
 
@@ -809,7 +815,7 @@ export class PerformanceCollector {
     });
 
     if (!site) {
-      console.warn(`⚠️ Site ${siteId} not found for Shopify detection`);
+      logger.warn(`⚠️ Site ${siteId} not found for Shopify detection`);
       return;
     }
 
@@ -830,7 +836,7 @@ export class PerformanceCollector {
     // If not detected yet, check if the site is actually a Shopify store by checking headers
     if (!isShopifyStore) {
       try {
-        console.log(`🔍 Checking if ${site.url} is a Shopify store...`);
+        logger.info(`🔍 Checking if ${site.url} is a Shopify store...`);
         const checkResponse = await fetch(site.url, {
           method: 'HEAD',
           redirect: 'follow',
@@ -846,22 +852,22 @@ export class PerformanceCollector {
 
         if (poweredBy?.toLowerCase().includes('shopify') || shopId || shopifyHeader) {
           isShopifyStore = true;
-          console.log(`✅ Detected Shopify store via headers (x-shopid: ${shopId})`);
+          logger.info(`✅ Detected Shopify store via headers (x-shopid: ${shopId})`);
         }
       } catch (error) {
         const err = error as Error;
-        console.log(`⚠️ Could not check Shopify headers for ${site.url}:`, err.message);
+        logger.info(`⚠️ Could not check Shopify headers for ${site.url}:`, err.message);
       }
     }
 
     if (isShopifyStore) {
-      console.log(`🛍️ Detected Shopify store - collecting additional eCommerce metrics`);
+      logger.info(`🛍️ Detected Shopify store - collecting additional eCommerce metrics`);
       try {
         // Mark as collected for this session
         this.shopifyCollectedThisSession.add(siteId);
         await shopifyMetricsCollector.collectShopifyPageMetrics(siteId);
       } catch (error) {
-        console.warn(`⚠️ Could not collect Shopify metrics for site ${siteId}:`, error);
+        logger.warn(`⚠️ Could not collect Shopify metrics for site ${siteId}:`, error);
         // Remove from collected set on failure so it can be retried
         this.shopifyCollectedThisSession.delete(siteId);
       }
@@ -873,7 +879,7 @@ export class PerformanceCollector {
       where: { monitoringEnabled: true }
     });
 
-    console.log(`🔄 Starting performance collection for ${sites.length} active sites`);
+    logger.info(`🔄 Starting performance collection for ${sites.length} active sites`);
 
     // Clear the Shopify collection tracking for new batch
     this.shopifyCollectedThisSession.clear();
@@ -881,18 +887,18 @@ export class PerformanceCollector {
     // Process sites sequentially with delay to prevent system freeze
     for (const site of sites) {
       try {
-        console.log(`📊 Processing site ${site.name} (${site.url})`);
+        logger.info(`📊 Processing site ${site.name} (${site.url})`);
         await this.collectForSite(site.id);
 
         // Add delay between sites to prevent overwhelming the system
-        console.log(`⏱️ Waiting 5 seconds before next site...`);
+        logger.info(`⏱️ Waiting 5 seconds before next site...`);
         await new Promise(resolve => setTimeout(resolve, 5000));
       } catch (error) {
-        console.error(`Failed to collect metrics for site ${site.name}:`, error);
+        logger.error(`Failed to collect metrics for site ${site.name}:`, error);
       }
     }
 
-    console.log(`✅ Performance collection completed for all sites`);
+    logger.info(`✅ Performance collection completed for all sites`);
   }
 }
 

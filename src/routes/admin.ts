@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import express, { Router } from 'express';
 import { execSync } from 'child_process';
 import { prisma } from '../services/database';
@@ -13,7 +14,7 @@ router.post('/migrate-db-once', async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
-    console.log('Creating database tables directly...');
+    logger.info('Creating database tables directly...');
 
     // Create tables directly using raw SQL
     await prisma.$executeRawUnsafe(`
@@ -97,23 +98,23 @@ router.post('/migrate-db-once', async (req, res) => {
       ADD CONSTRAINT "performance_metrics_siteId_fkey"
       FOREIGN KEY ("siteId") REFERENCES "sites"("id")
       ON DELETE CASCADE ON UPDATE CASCADE
-    `).catch(e => console.log('Foreign key might already exist'));
+    `).catch(e => logger.info('Foreign key might already exist'));
 
     await prisma.$executeRawUnsafe(`
       ALTER TABLE "scheduled_jobs"
       ADD CONSTRAINT "scheduled_jobs_siteId_fkey"
       FOREIGN KEY ("siteId") REFERENCES "sites"("id")
       ON DELETE CASCADE ON UPDATE CASCADE
-    `).catch(e => console.log('Foreign key might already exist'));
+    `).catch(e => logger.info('Foreign key might already exist'));
 
-    console.log('Database tables created successfully');
+    logger.info('Database tables created successfully');
 
     res.json({
       success: true,
       message: 'Database tables created successfully'
     });
   } catch (error: any) {
-    console.error('Migration error:', error.message);
+    logger.error('Migration error:', error.message);
     res.status(500).json({
       error: 'Migration failed',
       details: error.message,
@@ -132,7 +133,7 @@ router.get('/check-tables', async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
-    console.log('Checking database tables...');
+    logger.info('Checking database tables...');
 
     // Get all tables
     const tables = await prisma.$queryRawUnsafe(`
@@ -157,7 +158,7 @@ router.get('/check-tables', async (req, res) => {
       message: 'Database check complete'
     });
   } catch (error: any) {
-    console.error('Database check error:', error.message);
+    logger.error('Database check error:', error.message);
     res.status(500).json({
       error: 'Database check failed',
       details: error.message
@@ -180,7 +181,7 @@ router.post('/add-sample-metrics', async (req, res) => {
       return res.status(400).json({ error: 'Invalid request body' });
     }
 
-    console.log(`Adding ${metrics.length} sample metrics for site ${siteId}...`);
+    logger.info(`Adding ${metrics.length} sample metrics for site ${siteId}...`);
 
     // Insert metrics
     const results = [];
@@ -210,7 +211,7 @@ router.post('/add-sample-metrics', async (req, res) => {
         });
         results.push({ success: true, id: result.id });
       } catch (error: any) {
-        console.error('Failed to insert metric:', error.message);
+        logger.error('Failed to insert metric:', error.message);
         results.push({ success: false, error: error.message });
       }
     }
@@ -221,7 +222,7 @@ router.post('/add-sample-metrics', async (req, res) => {
       results
     });
   } catch (error: any) {
-    console.error('Add sample metrics error:', error.message);
+    logger.error('Add sample metrics error:', error.message);
     res.status(500).json({
       error: 'Failed to add sample metrics',
       details: error.message

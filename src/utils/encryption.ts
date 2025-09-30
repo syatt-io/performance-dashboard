@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import CryptoJS from 'crypto-js';
 
 // Get encryption key from environment variable
@@ -25,7 +26,7 @@ export function encrypt(text: string): string {
     const encrypted = CryptoJS.AES.encrypt(text, ENCRYPTION_KEY).toString();
     return encrypted;
   } catch (error) {
-    console.error('Encryption failed:', error);
+    logger.error('Encryption failed:', error);
     throw new Error('Failed to encrypt sensitive data');
   }
 }
@@ -50,7 +51,7 @@ export function decrypt(encryptedText: string): string {
 
     return decryptedText;
   } catch (error) {
-    console.error('Decryption failed:', error);
+    logger.error('Decryption failed:', error);
     throw new Error('Failed to decrypt sensitive data');
   }
 }
@@ -99,7 +100,7 @@ export function decryptCredentials(credentials: { apiKey?: string; accessToken?:
     try {
       result.apiKey = decrypt(result.apiKey);
     } catch (error) {
-      console.warn('Failed to decrypt API key, may be plain text');
+      logger.warn('Failed to decrypt API key, may be plain text');
     }
   }
 
@@ -107,7 +108,7 @@ export function decryptCredentials(credentials: { apiKey?: string; accessToken?:
     try {
       result.accessToken = decrypt(result.accessToken);
     } catch (error) {
-      console.warn('Failed to decrypt access token, may be plain text');
+      logger.warn('Failed to decrypt access token, may be plain text');
     }
   }
 

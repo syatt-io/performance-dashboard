@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import { Router, Request, Response } from 'express';
 import { shopifyMetricsCollector } from '../services/shopifyMetrics';
 import { prisma } from '../services/database';
@@ -26,7 +27,7 @@ router.post('/metrics/collection', async (req: Request, res: Response) => {
       metrics
     });
   } catch (error) {
-    console.error('Error collecting collection metrics:', error);
+    logger.error('Error collecting collection metrics:', error);
     res.status(500).json({
       error: 'Failed to collect collection metrics',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -56,7 +57,7 @@ router.post('/metrics/product', async (req: Request, res: Response) => {
       metrics
     });
   } catch (error) {
-    console.error('Error collecting product metrics:', error);
+    logger.error('Error collecting product metrics:', error);
     res.status(500).json({
       error: 'Failed to collect product metrics',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -76,7 +77,7 @@ router.post('/metrics/all/:siteId', async (req: Request, res: Response) => {
       message: 'Shopify page metrics collection started'
     });
   } catch (error) {
-    console.error('Error collecting Shopify metrics:', error);
+    logger.error('Error collecting Shopify metrics:', error);
     res.status(500).json({
       error: 'Failed to collect Shopify metrics',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -94,7 +95,7 @@ router.get('/summary/:siteId', async (req: Request, res: Response) => {
 
     res.json(summary);
   } catch (error) {
-    console.error('Error fetching Shopify summary:', error);
+    logger.error('Error fetching Shopify summary:', error);
     res.status(500).json({
       error: 'Failed to fetch Shopify summary',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -112,7 +113,7 @@ router.get('/averages/:siteId', async (req: Request, res: Response) => {
 
     res.json(averages);
   } catch (error) {
-    console.error('Error calculating page type averages:', error);
+    logger.error('Error calculating page type averages:', error);
     res.status(500).json({
       error: 'Failed to calculate page type averages',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -149,7 +150,7 @@ router.put('/config/:siteId', async (req: Request, res: Response) => {
       config
     });
   } catch (error) {
-    console.error('Error updating Shopify config:', error);
+    logger.error('Error updating Shopify config:', error);
     res.status(500).json({
       error: 'Failed to update Shopify configuration',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -182,7 +183,7 @@ router.get('/config/:siteId', async (req: Request, res: Response) => {
 
     res.json(config);
   } catch (error) {
-    console.error('Error fetching Shopify config:', error);
+    logger.error('Error fetching Shopify config:', error);
     res.status(500).json({
       error: 'Failed to fetch Shopify configuration',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -242,7 +243,7 @@ router.post('/config/:siteId/collection', async (req: Request, res: Response) =>
       config
     });
   } catch (error) {
-    console.error('Error adding collection:', error);
+    logger.error('Error adding collection:', error);
     res.status(500).json({
       error: 'Failed to add collection',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -302,7 +303,7 @@ router.post('/config/:siteId/product', async (req: Request, res: Response) => {
       config
     });
   } catch (error) {
-    console.error('Error adding product:', error);
+    logger.error('Error adding product:', error);
     res.status(500).json({
       error: 'Failed to add product',
       details: error instanceof Error ? error.message : 'Unknown error'

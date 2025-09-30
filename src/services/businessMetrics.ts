@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import { prisma } from './database';
 
 export interface ConversionMetrics {
@@ -60,7 +61,7 @@ export class BusinessMetricsService {
       }
     });
 
-    console.log(`📊 Stored business metrics for site ${metrics.siteId}`);
+    logger.info(`📊 Stored business metrics for site ${metrics.siteId}`);
   }
 
   /**

@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 /**
  * Validates required environment variables on application startup
  * Throws an error if any required variables are missing or invalid
@@ -61,12 +62,12 @@ export function validateEnvironmentVariables(): void {
 
   // Log warnings
   if (warnings.length > 0) {
-    console.warn('⚠️  Optional environment variables not set:');
-    warnings.forEach(warning => console.warn(`  - ${warning}`));
+    logger.warn('⚠️  Optional environment variables not set:');
+    warnings.forEach(warning => logger.warn(`  - ${warning}`));
   }
 
   // Log success
-  console.log('✅ All required environment variables validated successfully');
+  logger.info('✅ All required environment variables validated successfully');
 }
 
 /**
