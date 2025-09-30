@@ -10,9 +10,19 @@ export const apiLimiter = rateLimit({
   standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
   legacyHeaders: false, // Disable `X-RateLimit-*` headers
   handler: (req, res) => {
-    logger.warn(`Rate limit exceeded for IP: ${req.ip}`);
+    const resetTime = new Date(Date.now() + 15 * 60 * 1000);
+    logger.warn(`Rate limit exceeded for IP: ${req.ip}`, {
+      path: req.path,
+      method: req.method,
+      resetTime: resetTime.toISOString(),
+    });
     res.status(429).json({
-      error: 'Too many requests from this IP, please try again later.',
+      error: 'Rate limit exceeded',
+      message: 'You have exceeded the maximum number of API requests (1000 per 15 minutes).',
+      retryAfter: '15 minutes',
+      resetTime: resetTime.toISOString(),
+      limit: 1000,
+      window: '15 minutes',
     });
   },
 });
@@ -26,9 +36,19 @@ export const metricsCollectionLimiter = rateLimit({
   legacyHeaders: false,
   skipSuccessfulRequests: false,
   handler: (req, res) => {
-    logger.warn(`Metrics collection rate limit exceeded for IP: ${req.ip}`);
+    const resetTime = new Date(Date.now() + 60 * 60 * 1000);
+    logger.warn(`Metrics collection rate limit exceeded for IP: ${req.ip}`, {
+      path: req.path,
+      method: req.method,
+      resetTime: resetTime.toISOString(),
+    });
     res.status(429).json({
-      error: 'Too many metrics collection requests, please try again in an hour.',
+      error: 'Rate limit exceeded',
+      message: 'You have exceeded the maximum number of metrics collection requests (10 per hour). Performance tests are resource-intensive operations.',
+      retryAfter: '1 hour',
+      resetTime: resetTime.toISOString(),
+      limit: 10,
+      window: '1 hour',
     });
   },
 });
@@ -41,9 +61,19 @@ export const siteOperationsLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res) => {
-    logger.warn(`Site operations rate limit exceeded for IP: ${req.ip}`);
+    const resetTime = new Date(Date.now() + 15 * 60 * 1000);
+    logger.warn(`Site operations rate limit exceeded for IP: ${req.ip}`, {
+      path: req.path,
+      method: req.method,
+      resetTime: resetTime.toISOString(),
+    });
     res.status(429).json({
-      error: 'Too many site operations, please try again later.',
+      error: 'Rate limit exceeded',
+      message: 'You have exceeded the maximum number of site operations (50 per 15 minutes).',
+      retryAfter: '15 minutes',
+      resetTime: resetTime.toISOString(),
+      limit: 50,
+      window: '15 minutes',
     });
   },
 });
