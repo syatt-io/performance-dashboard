@@ -71,7 +71,7 @@ class ConfigService {
 
       // Logging
       logLevel: (process.env.LOG_LEVEL as EnvironmentConfig['logLevel']) ||
-        (this.isDevelopment() ? 'debug' : 'info'),
+        (process.env.NODE_ENV === 'development' ? 'debug' : 'info'),
     };
   }
 
