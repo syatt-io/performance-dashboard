@@ -6,20 +6,29 @@ function getRedisConfig() {
   if (process.env.REDIS_URL) {
     console.log('[Queue] Using REDIS_URL for connection');
 
-    // For Upstash Redis (rediss:// URLs), parse and add TLS config
-    if (process.env.REDIS_URL.startsWith('rediss://')) {
+    // For Upstash Redis, parse URL and add proper config
+    if (process.env.REDIS_URL.includes('upstash.io') ||
+        process.env.REDIS_URL.startsWith('rediss://') ||
+        process.env.REDIS_URL.startsWith('redis://')) {
       const url = new URL(process.env.REDIS_URL);
-      return {
+      const config = {
         host: url.hostname,
         port: parseInt(url.port) || 6379,
         password: url.password,
-        tls: {
-          rejectUnauthorized: false, // Required for Upstash
-        },
-        maxRetriesPerRequest: 3,
+        maxRetriesPerRequest: null, // Disable retry limit for long-running jobs
         enableReadyCheck: false,
         connectTimeout: 10000,
       };
+
+      // Add TLS if using rediss:// or upstash.io
+      if (url.protocol === 'rediss:' || url.hostname.includes('upstash.io')) {
+        config.tls = {
+          rejectUnauthorized: false,
+        };
+      }
+
+      console.log(`[Queue] Configured Redis for ${url.hostname} with maxRetriesPerRequest=null`);
+      return config;
     }
 
     return process.env.REDIS_URL;
