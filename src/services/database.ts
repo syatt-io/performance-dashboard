@@ -1,18 +1,17 @@
 import { PrismaClient } from '../generated/prisma';
 import { logger } from '../utils/logger';
+import { config, configService } from '../config/env';
 
 // Configure connection pooling based on environment
-const connectionLimit = process.env.DATABASE_CONNECTION_LIMIT
-  ? parseInt(process.env.DATABASE_CONNECTION_LIMIT, 10)
-  : 10; // Default to 10 connections
+const connectionLimit = config.databaseConnectionLimit;
 
 // Append connection pool settings to DATABASE_URL
-const databaseUrl = process.env.DATABASE_URL
-  ? `${process.env.DATABASE_URL}${process.env.DATABASE_URL.includes('?') ? '&' : '?'}connection_limit=${connectionLimit}&pool_timeout=20`
+const databaseUrl = config.databaseUrl
+  ? `${config.databaseUrl}${config.databaseUrl.includes('?') ? '&' : '?'}connection_limit=${connectionLimit}&pool_timeout=20`
   : undefined;
 
 export const prisma = new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['error'],
+  log: configService.isDevelopment() ? ['query', 'info', 'warn', 'error'] : ['error'],
   datasources: {
     db: {
       url: databaseUrl,
@@ -25,7 +24,7 @@ export async function connectDatabase() {
     await prisma.$connect();
     logger.info('✅ Database connected successfully', {
       connectionLimit,
-      environment: process.env.NODE_ENV,
+      environment: config.nodeEnv,
     });
   } catch (error) {
     logger.error('❌ Database connection failed:', { error });

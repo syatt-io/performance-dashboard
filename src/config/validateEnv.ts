@@ -1,29 +1,25 @@
 import { logger } from '../utils/logger';
+import { config } from './env';
+
 /**
  * Validates required environment variables on application startup
  * Throws an error if any required variables are missing or invalid
  */
 export function validateEnvironmentVariables(): void {
-  const requiredEnvVars = [
-    'DATABASE_URL',
-    'ENCRYPTION_KEY',
-    'PAGESPEED_API_KEY',
-  ];
-
-  const optionalEnvVars = {
-    'REDIS_URL': 'Queue functionality may not work without Redis. Fallback: localhost:6379',
-  };
-
   const missing: string[] = [];
   const invalid: string[] = [];
   const warnings: string[] = [];
 
-  // Check for missing required variables
-  requiredEnvVars.forEach(key => {
-    if (!process.env[key]) {
-      missing.push(key);
-    }
-  });
+  // Check required variables
+  if (!config.databaseUrl) {
+    missing.push('DATABASE_URL');
+  }
+  if (!config.encryptionKey) {
+    missing.push('ENCRYPTION_KEY');
+  }
+  if (!config.pagespeedApiKey) {
+    missing.push('PAGESPEED_API_KEY');
+  }
 
   if (missing.length > 0) {
     throw new Error(
@@ -32,25 +28,18 @@ export function validateEnvironmentVariables(): void {
     );
   }
 
-  // Check for missing optional variables
-  Object.entries(optionalEnvVars).forEach(([key, message]) => {
-    if (!process.env[key]) {
-      warnings.push(`${key}: ${message}`);
-    }
-  });
-
-  // Validate specific format requirements
-  if (process.env.ENCRYPTION_KEY && process.env.ENCRYPTION_KEY.length < 32) {
+  // Validate format requirements
+  if (config.encryptionKey.length < 32) {
     invalid.push('ENCRYPTION_KEY (must be at least 32 characters)');
   }
 
-  if (process.env.DATABASE_URL && !process.env.DATABASE_URL.startsWith('postgresql://')) {
+  if (!config.databaseUrl.startsWith('postgresql://')) {
     invalid.push('DATABASE_URL (must start with postgresql://)');
   }
 
-  if (process.env.REDIS_URL &&
-      !process.env.REDIS_URL.startsWith('redis://') &&
-      !process.env.REDIS_URL.startsWith('rediss://')) {
+  if (config.redisUrl &&
+      !config.redisUrl.startsWith('redis://') &&
+      !config.redisUrl.startsWith('rediss://')) {
     invalid.push('REDIS_URL (must start with redis:// or rediss://)');
   }
 
@@ -58,6 +47,11 @@ export function validateEnvironmentVariables(): void {
     throw new Error(
       `Invalid environment variable formats:\n${invalid.map(v => `  - ${v}`).join('\n')}`
     );
+  }
+
+  // Check for optional variables
+  if (!config.redisUrl) {
+    warnings.push('REDIS_URL: Queue functionality may not work without Redis. Fallback: localhost:6379');
   }
 
   // Log warnings
@@ -68,17 +62,4 @@ export function validateEnvironmentVariables(): void {
 
   // Log success
   logger.info('✅ All required environment variables validated successfully');
-}
-
-/**
- * Gets optional environment variables with defaults
- */
-export function getOptionalEnvVars() {
-  return {
-    nodeEnv: process.env.NODE_ENV || 'development',
-    port: parseInt(process.env.PORT || '3000', 10),
-    allowedOrigins: process.env.ALLOWED_ORIGINS
-      ? process.env.ALLOWED_ORIGINS.split(',')
-      : ['http://localhost:3001', 'http://localhost:3000'],
-  };
 }

@@ -33,8 +33,8 @@ export interface LighthouseResult {
   fullyLoadedTime?: number;
   bytesIn?: number;
   requests?: number;
-  visualProgress?: any;
-  lighthouseData?: any;
+  visualProgress?: Record<string, unknown>;
+  lighthouseData?: import('../types').LighthouseData;
   error?: string;
   success: boolean;
   // Additional fields for tracking test metadata
@@ -271,8 +271,8 @@ export class PerformanceCollector {
 
       const thirdPartyImpact = {
         blockingTime: audits['third-party-summary']?.numericValue || 0,
-        transferSize: audits['third-party-summary']?.details?.items?.reduce((sum: number, item: any) =>
-          sum + (item.transferSize || 0), 0) || 0,
+        transferSize: audits['third-party-summary']?.details?.items?.reduce((sum: number, item: Record<string, unknown>) =>
+          sum + (typeof item.transferSize === 'number' ? item.transferSize : 0), 0) || 0,
         requestCount: audits['third-party-summary']?.details?.items?.length || 0
       };
 
@@ -540,8 +540,8 @@ export class PerformanceCollector {
       // Extract third-party impact
       const thirdPartyImpact = {
         blockingTime: audits['third-party-summary']?.numericValue || 0,
-        transferSize: audits['third-party-summary']?.details?.items?.reduce((sum: number, item: any) =>
-          sum + (item.transferSize || 0), 0) || 0,
+        transferSize: audits['third-party-summary']?.details?.items?.reduce((sum: number, item: Record<string, unknown>) =>
+          sum + (typeof item.transferSize === 'number' ? item.transferSize : 0), 0) || 0,
         requestCount: audits['third-party-summary']?.details?.items?.length || 0
       };
 

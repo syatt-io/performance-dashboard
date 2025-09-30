@@ -9,6 +9,27 @@ export interface Site {
   updatedAt: Date;
 }
 
+export interface LighthouseData {
+  performance?: number;
+  accessibility?: number;
+  bestPractices?: number;
+  seo?: number;
+  audits?: Record<string, {
+    score?: number;
+    numericValue?: number;
+    details?: {
+      items?: Array<Record<string, unknown>>;
+      [key: string]: unknown;
+    };
+    [key: string]: unknown;
+  }>;
+  categories?: Record<string, {
+    score?: number;
+    [key: string]: unknown;
+  }>;
+  [key: string]: unknown;
+}
+
 export interface PerformanceMetric {
   id: string;
   siteId: string;
@@ -23,7 +44,7 @@ export interface PerformanceMetric {
     speedIndex?: number;
     performanceScore?: number;
   };
-  lighthouse?: any;
+  lighthouse?: LighthouseData;
   shopifyMetrics?: {
     cartResponseTime?: number;
     checkoutStepTime?: number;

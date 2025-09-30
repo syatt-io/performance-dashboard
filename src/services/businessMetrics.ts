@@ -139,10 +139,10 @@ export class BusinessMetricsService {
   /**
    * Calculate average of a metric
    */
-  private calculateAverage(metrics: any[], field: string): number | null {
+  private calculateAverage(metrics: Array<Record<string, unknown>>, field: string): number | null {
     const values = metrics
       .map(m => m[field])
-      .filter(v => v !== null && v !== undefined);
+      .filter((v): v is number => typeof v === 'number');
 
     return values.length > 0
       ? values.reduce((a, b) => a + b, 0) / values.length
@@ -239,7 +239,7 @@ export class BusinessMetricsService {
     conversionRate: number;
     revenue: number;
     transactions: number;
-    avgPerformanceScore: number;
+    avgPerformanceScore: number | null;
   }[]> {
     const since = new Date();
     since.setDate(since.getDate() - days);
@@ -279,7 +279,14 @@ export class BusinessMetricsService {
     });
 
     // Calculate daily averages and format response
-    const trends: any[] = [];
+    interface TrendData {
+      date: Date;
+      conversionRate: number;
+      revenue: number;
+      transactions: number;
+      avgPerformanceScore: number | null;
+    }
+    const trends: TrendData[] = [];
 
     dailyMetrics.forEach(daily => {
       const avgScore = daily.performances.length > 0

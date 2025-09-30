@@ -10,7 +10,7 @@ export interface ShopifyPageMetrics {
   timeToInteractive?: number;
   firstProductVisible?: number;
   totalProducts?: number;
-  performance?: any;
+  performance?: Record<string, unknown>;
 }
 
 export class ShopifyMetricsCollector {
@@ -137,7 +137,7 @@ export class ShopifyMetricsCollector {
         loadTime: metrics.lcp,
         timeToInteractive: metrics.fcp,
         firstProductVisible: metrics.fcp, // Approximation
-        performance: metrics
+        performance: metrics as unknown as Record<string, unknown>
       };
 
     } catch (error) {
@@ -228,7 +228,7 @@ export class ShopifyMetricsCollector {
         pageType: 'product',
         loadTime: metrics.lcp,
         timeToInteractive: metrics.fcp,
-        performance: metrics
+        performance: metrics as unknown as Record<string, unknown>
       };
 
     } catch (error) {
@@ -354,7 +354,25 @@ export class ShopifyMetricsCollector {
     });
 
     // Group by page type
-    const summary: any = {
+    interface ShopifyPageData {
+      url: string;
+      name: string;
+      type: string;
+      lcp?: number | null;
+      cls?: number | null;
+      performance?: number | null;
+      deviceType: string;
+      timestamp: Date;
+    }
+
+    interface ShopifySummary {
+      collections: ShopifyPageData[];
+      products: ShopifyPageData[];
+      home: ShopifyPageData[];
+      other: ShopifyPageData[];
+    }
+
+    const summary: ShopifySummary = {
       collections: [],
       products: [],
       home: [],
@@ -398,11 +416,11 @@ export class ShopifyMetricsCollector {
   /**
    * Calculate average performance by page type
    */
-  async getPageTypeAverages(siteId: string, days: number = 30): Promise<any> {
+  async getPageTypeAverages(siteId: string, days: number = 30): Promise<Record<string, unknown>> {
     const summary = await this.getShopifyPageSummary(siteId, days);
 
-    const calculateAverage = (pages: any[], metric: string) => {
-      const values = pages.map(p => p[metric]).filter(v => v !== null && v !== undefined);
+    const calculateAverage = (pages: Array<Record<string, unknown>>, metric: string): number | null => {
+      const values = pages.map(p => p[metric]).filter((v): v is number => typeof v === 'number');
       return values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : null;
     };
 

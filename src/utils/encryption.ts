@@ -1,16 +1,9 @@
 import { logger } from '../utils/logger';
 import CryptoJS from 'crypto-js';
+import { config } from '../config/env';
 
-// Get encryption key from environment variable
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY as string;
-
-if (!ENCRYPTION_KEY) {
-  throw new Error('ENCRYPTION_KEY environment variable is required');
-}
-
-if (ENCRYPTION_KEY.length < 32) {
-  throw new Error('ENCRYPTION_KEY must be at least 32 characters long for secure encryption');
-}
+// Get encryption key from centralized config
+const ENCRYPTION_KEY = config.encryptionKey;
 
 /**
  * Encrypts sensitive data before storing in database

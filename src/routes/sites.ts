@@ -61,9 +61,9 @@ router.post('/', validateSiteCreation, async (req: Request, res: Response) => {
     const safeSite = site;
 
     res.status(201).json(safeSite);
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error creating site:', error);
-    if (error.code === 'P2002') {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
       return res.status(400).json({ error: 'Site with this URL already exists' });
     }
     res.status(500).json({ error: 'Failed to create site' });

@@ -52,7 +52,7 @@ router.get('/sites/:siteId', async (req: Request, res: Response) => {
       }
     }
 
-    const whereClause: any = {
+    const whereClause: Prisma.PerformanceMetricWhereInput = {
       siteId,
       timestamp: startDate && endDate ?
         { gte: timeFilter, lte: endTimeFilter } :
@@ -137,7 +137,12 @@ router.post('/sites/:siteId/collect', async (req: Request, res: Response) => {
     }
 
     // Create monitoring jobs and add to queue (safer than setImmediate)
-    const jobs: Array<{ scheduledJob: any; device: string; queueJob: any }> = [];
+    interface JobRecord {
+      scheduledJob: Prisma.ScheduledJobGetPayload<Record<string, never>>;
+      device: string;
+      queueJob: unknown;
+    }
+    const jobs: JobRecord[] = [];
     const deviceTypes = deviceType && ['mobile', 'desktop'].includes(deviceType)
       ? [deviceType]
       : ['mobile', 'desktop'];
@@ -171,7 +176,7 @@ router.post('/sites/:siteId/collect', async (req: Request, res: Response) => {
       jobs: jobs.map(j => ({
         id: j.scheduledJob.id,
         status: j.scheduledJob.status,
-        queueJobId: j.queueJob.id,
+        queueJobId: (j.queueJob as { id?: string })?.id || 'unknown',
         device: j.device
       }))
     });
@@ -463,14 +468,14 @@ router.get('/comparison', async (req: Request, res: Response) => {
       const mobileMetrics = siteMetrics.filter(m => m.deviceType === 'mobile');
       const desktopMetrics = siteMetrics.filter(m => m.deviceType === 'desktop');
 
-      const calculateStats = (data: any[], metricKey: string) => {
-        const values = data.map(d => d[metricKey]).filter(v => v !== null && v !== undefined);
+      const calculateStats = (data: Array<Record<string, unknown>>, metricKey: string) => {
+        const values = data.map(d => d[metricKey]).filter((v): v is number => typeof v === 'number');
         if (values.length === 0) return { avg: null, min: null, max: null, latest: null };
 
         const avg = values.reduce((a, b) => a + b, 0) / values.length;
         const min = Math.min(...values);
         const max = Math.max(...values);
-        const latest = data[0]?.[metricKey] || null;
+        const latest = typeof data[0]?.[metricKey] === 'number' ? data[0][metricKey] as number : null;
 
         return { avg, min, max, latest };
       };
@@ -563,7 +568,7 @@ router.get('/job-status', async (req: Request, res: Response) => {
       // Determine overall site testing status
       let status = 'idle';
       let progress = 0;
-      let activeJobs: any[] = [];
+      let activeJobs: Prisma.ScheduledJobGetPayload<Record<string, never>>[] = [];
 
       if (jobs.length > 0) {
         const runningJobs = jobs.filter(j => j.status === 'running');
@@ -586,13 +591,7 @@ router.get('/job-status', async (req: Request, res: Response) => {
           progress = 0;
         }
 
-        activeJobs = jobs.map(job => ({
-          id: job.id,
-          jobType: job.jobType,
-          status: job.status,
-          scheduledFor: job.scheduledFor,
-          startedAt: job.startedAt
-        }));
+        activeJobs = jobs;
       }
 
       return {

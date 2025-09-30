@@ -113,13 +113,15 @@ router.post('/migrate-db-once', async (req, res) => {
       success: true,
       message: 'Database tables created successfully'
     });
-  } catch (error: any) {
-    logger.error('Migration error:', error.message);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorObj = error && typeof error === 'object' ? error as Record<string, unknown> : {};
+    logger.error('Migration error:', errorMessage);
     res.status(500).json({
       error: 'Migration failed',
-      details: error.message,
-      stdout: error.stdout?.toString(),
-      stderr: error.stderr?.toString()
+      details: errorMessage,
+      stdout: errorObj.stdout?.toString(),
+      stderr: errorObj.stderr?.toString()
     });
   }
 });
@@ -146,10 +148,11 @@ router.get('/check-tables', async (req, res) => {
     // Test sites table
     let sitesTest = null;
     try {
-      const count: any = await prisma.$queryRawUnsafe(`SELECT COUNT(*) as count FROM sites`);
+      const count = await prisma.$queryRawUnsafe<Array<{ count: bigint }>>(`SELECT COUNT(*) as count FROM sites`);
       sitesTest = { success: true, count: Number(count[0]?.count || 0) };
-    } catch (e: any) {
-      sitesTest = { success: false, error: e.message };
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+      sitesTest = { success: false, error: errorMessage };
     }
 
     res.json({
@@ -157,11 +160,12 @@ router.get('/check-tables', async (req, res) => {
       sitesTest,
       message: 'Database check complete'
     });
-  } catch (error: any) {
-    logger.error('Database check error:', error.message);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Database check error:', errorMessage);
     res.status(500).json({
       error: 'Database check failed',
-      details: error.message
+      details: errorMessage
     });
   }
 });
@@ -210,9 +214,10 @@ router.post('/add-sample-metrics', async (req, res) => {
           }
         });
         results.push({ success: true, id: result.id });
-      } catch (error: any) {
-        logger.error('Failed to insert metric:', error.message);
-        results.push({ success: false, error: error.message });
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        logger.error('Failed to insert metric:', errorMessage);
+        results.push({ success: false, error: errorMessage });
       }
     }
 
