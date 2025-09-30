@@ -1,10 +1,14 @@
 import CryptoJS from 'crypto-js';
 
 // Get encryption key from environment variable
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-dev-key-change-in-production';
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
 
-if (process.env.NODE_ENV === 'production' && ENCRYPTION_KEY === 'default-dev-key-change-in-production') {
-  console.error('WARNING: Using default encryption key in production! Set ENCRYPTION_KEY environment variable.');
+if (!ENCRYPTION_KEY) {
+  throw new Error('ENCRYPTION_KEY environment variable is required');
+}
+
+if (ENCRYPTION_KEY.length < 32) {
+  throw new Error('ENCRYPTION_KEY must be at least 32 characters long for secure encryption');
 }
 
 /**

@@ -865,16 +865,16 @@ export class PerformanceCollector {
 
       // PageSpeed API works best with API keys, not Bearer tokens
       // The API key should be from the syatt-io project for 25k requests/day quota
-      const apiKey = process.env.PAGESPEED_API_KEY || 'AIzaSyClK7IglzS_ziiQl_CF3AMKenRhDPFq44c';
+      const apiKey = process.env.PAGESPEED_API_KEY;
 
-      if (apiKey) {
-        console.log('🔑 Using API Key authentication from syatt-io project');
-        console.log('📊 Quota: 25,000 requests/day with API key');
-        console.log(`🎯 API key prefix: ${apiKey.substring(0, 15)}...`);
-        params.append('key', apiKey);
-      } else {
-        console.log('📝 Using free tier (no authentication) - limited to 25-100 requests/day');
+      if (!apiKey) {
+        throw new Error('PAGESPEED_API_KEY environment variable is required');
       }
+
+      console.log('🔑 Using API Key authentication from syatt-io project');
+      console.log('📊 Quota: 25,000 requests/day with API key');
+      console.log(`🎯 API key prefix: ${apiKey.substring(0, 15)}...`);
+      params.append('key', apiKey);
 
       const apiUrl = `${baseUrl}?${params.toString()}`;
 

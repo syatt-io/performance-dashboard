@@ -1,0 +1,42 @@
+version: '3.8'
+
+# Local development environment that mirrors Digital Ocean production
+# Usage: docker-compose -f docker-compose.dev.yml up -d
+
+services:
+  # PostgreSQL 15 (matching Digital Ocean)
+  postgres:
+    image: postgres:15
+    container_name: perf-dashboard-db-local
+    environment:
+      POSTGRES_USER: performance_user
+      POSTGRES_PASSWORD: local_dev_password
+      POSTGRES_DB: performance_dashboard
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U performance_user -d performance_dashboard"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis 7 (matching Digital Ocean)
+  redis:
+    image: redis:7-alpine
+    container_name: perf-dashboard-redis-local
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_dev_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_dev_data:
+  redis_dev_data:

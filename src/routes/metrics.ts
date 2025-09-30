@@ -15,10 +15,12 @@ router.get('/sites/:siteId', async (req: Request, res: Response) => {
     // Calculate time filter - support both timeRange and custom date range
     let timeFilter: Date;
 
+    let endTimeFilter: Date | undefined;
+
     if (startDate && endDate) {
       // Custom date range
       timeFilter = new Date(startDate as string);
-      var endTimeFilter = new Date(endDate as string);
+      endTimeFilter = new Date(endDate as string);
     } else {
       // Predefined time range - use start of day for daily periods to be more inclusive
       timeFilter = new Date();

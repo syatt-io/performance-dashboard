@@ -19,7 +19,43 @@ This is a performance monitoring dashboard for Shopify e-commerce stores. The sy
 - **Visualization**: Recharts or Tremor for charts and dashboards
 - **State Management**: To be determined based on complexity
 
-## Common Development Commands
+## Local Development Environment
+
+### Quick Start (Recommended)
+```bash
+# 1. Start PostgreSQL and Redis with Docker
+docker-compose -f docker-compose.dev.yml up -d
+
+# 2. Set up environment variables
+cp .env.local.example .env.local
+# Edit .env.local with your actual API keys
+
+# 3. Run database migrations
+npm run prisma:migrate:deploy
+
+# 4. Generate Prisma client
+npm run prisma:generate
+
+# 5. Start development servers
+npm run dev:both  # Starts both API (port 3000) and dashboard (port 3001)
+```
+
+### Docker Commands
+```bash
+# Start local database and Redis (mirrors production)
+docker-compose -f docker-compose.dev.yml up -d
+
+# Stop containers
+docker-compose -f docker-compose.dev.yml down
+
+# View logs
+docker-compose -f docker-compose.dev.yml logs -f
+
+# Reset local database (delete all data)
+docker-compose -f docker-compose.dev.yml down -v
+```
+
+### Common Development Commands
 
 ```bash
 npm install            # Install dependencies
@@ -34,6 +70,7 @@ npm run lint           # Run ESLint
 npm run format         # Format code with Prettier
 npm run prisma:generate # Generate Prisma client
 npm run prisma:migrate  # Run database migrations
+npm run prisma:migrate:deploy  # Deploy migrations (production-safe)
 
 # Development URLs
 API Server:     http://localhost:3000/api
@@ -43,6 +80,9 @@ Health Check:   http://localhost:3000/health
 # Port Configuration
 API Server (Backend): Port 3000
 Dashboard (Frontend): Port 3001
+PostgreSQL: Port 5432
+Redis: Port 6379
+
 Note: If port 3000 is occupied by another process, kill it first:
   lsof -i :3000  # Find process using port 3000
   kill <PID>     # Kill the conflicting process

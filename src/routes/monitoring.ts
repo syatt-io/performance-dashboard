@@ -1,5 +1,4 @@
 import { Router, Request, Response } from 'express';
-// import { schedulerService } from '../services/schedulerService';
 
 const router = Router();
 

@@ -4,9 +4,19 @@ import dotenv from 'dotenv';
 import path from 'path';
 import routes from './routes';
 import { connectDatabase } from './services/database';
-// import { schedulerService } from './services/schedulerService';
+import { validateEnvironmentVariables } from './config/validateEnv';
 
+// Load environment variables first
 dotenv.config();
+
+// Validate all required environment variables before starting the app
+try {
+  validateEnvironmentVariables();
+} catch (error) {
+  console.error('❌ Environment validation failed:');
+  console.error((error as Error).message);
+  process.exit(1);
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;

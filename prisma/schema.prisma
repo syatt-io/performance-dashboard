@@ -66,6 +66,10 @@ model PerformanceMetric {
   site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
   @@index([siteId, timestamp(sort: Desc)])
+  @@index([siteId, deviceType, timestamp(sort: Desc)])
+  @@index([timestamp(sort: Desc)])
+  @@index([deviceType, timestamp(sort: Desc)])
+  @@index([pageType])
   @@map("performance_metrics")
 }
 
