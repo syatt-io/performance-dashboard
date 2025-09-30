@@ -11,7 +11,7 @@ function getRedisConfig() {
         process.env.REDIS_URL.startsWith('rediss://') ||
         process.env.REDIS_URL.startsWith('redis://')) {
       const url = new URL(process.env.REDIS_URL);
-      const config = {
+      const config: any = {
         host: url.hostname,
         port: parseInt(url.port) || 6379,
         password: url.password,
