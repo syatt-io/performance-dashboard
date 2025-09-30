@@ -141,15 +141,16 @@ const SiteDashboard = memo(function SiteDashboard({
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide">FID</h3>
+          <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide">INP</h3>
           <div className="mt-2">
             <div className="text-2xl font-bold text-gray-900">
-              {summary.coreWebVitals.fid.value?.toFixed(0) || 'N/A'}
-              {summary.coreWebVitals.fid.value && 'ms'}
+              {summary.coreWebVitals.inp?.value?.toFixed(0) || summary.coreWebVitals.fid?.value?.toFixed(0) || 'N/A'}
+              {(summary.coreWebVitals.inp?.value || summary.coreWebVitals.fid?.value) && 'ms'}
             </div>
-            <div className={`text-sm ${getStatusColor(summary.coreWebVitals.fid.status)}`}>
-              {summary.coreWebVitals.fid.status.replace('-', ' ')}
+            <div className={`text-sm ${getStatusColor(summary.coreWebVitals.inp?.status || summary.coreWebVitals.fid?.status || 'unknown')}`}>
+              {(summary.coreWebVitals.inp?.status || summary.coreWebVitals.fid?.status || 'unknown').replace('-', ' ')}
             </div>
+            <div className="text-xs text-gray-400 mt-1">Interaction to Next Paint</div>
           </div>
         </div>
 

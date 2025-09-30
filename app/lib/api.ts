@@ -39,13 +39,20 @@ export interface PerformanceMetric {
   fcp?: number;
   tbt?: number;
   ttfb?: number;
-  speedIndex?: number;
-  performanceScore?: number;
+  si?: number; // Speed Index (stored as 'si' in database)
+  speedIndex?: number; // Alias for si
+  tti?: number;
+  performance?: number; // Performance score
+  performanceScore?: number; // Alias for performance
+  pageLoadTime?: number;
+  pageSize?: number;
+  requests?: number;
   // Shopify-specific metrics
   imageOptimizationScore?: number;
   themeAssetSize?: number;
   thirdPartyBlockingTime?: number;
   location?: string;
+  testLocation?: string;
 }
 
 export interface MetricsSummary {
@@ -55,7 +62,8 @@ export interface MetricsSummary {
   lastUpdated: string | null;
   coreWebVitals: {
     lcp: { value: number | null; status: string; trend: string };
-    fid: { value: number | null; status: string; trend: string };
+    fid?: { value: number | null; status: string; trend: string };
+    inp?: { value: number | null; status: string; trend: string };
     cls: { value: number | null; status: string; trend: string };
     tbt: { value: number | null; status: string; trend: string };
     fcp: { value: number | null; status: string; trend: string };

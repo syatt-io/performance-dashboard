@@ -125,16 +125,30 @@ const MetricsChart = memo(function MetricsChart({
 }: MetricsChartProps) {
   const [selectedRange, setSelectedRange] = useState(dateRange);
 
+  // Helper to get the actual metric value (handles aliases like speedIndex -> si)
+  const getMetricValue = (m: PerformanceMetric, metricName: string): number | undefined => {
+    if (metricName === 'speedIndex') {
+      return m.si || m.speedIndex;
+    }
+    if (metricName === 'performanceScore') {
+      return m.performance || m.performanceScore;
+    }
+    return m[metricName as keyof PerformanceMetric] as number | undefined;
+  };
+
   // Process data for time-series visualization with memoization
   const processedData = useMemo(() => {
     return metrics
-      .filter(m => m[metric] !== null && m[metric] !== undefined)
+      .filter(m => {
+        const value = getMetricValue(m, metric);
+        return value !== null && value !== undefined;
+      })
       .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
       .map(m => ({
         timestamp: m.timestamp,
         formattedTime: formatTimestamp(m.timestamp, selectedRange.timeRange),
-        mobile: m.deviceType === 'mobile' ? m[metric] : null,
-        desktop: m.deviceType === 'desktop' ? m[metric] : null,
+        mobile: m.deviceType === 'mobile' ? getMetricValue(m, metric) : null,
+        desktop: m.deviceType === 'desktop' ? getMetricValue(m, metric) : null,
         rawTimestamp: new Date(m.timestamp).getTime()
       }));
   }, [metrics, metric, selectedRange.timeRange]);
