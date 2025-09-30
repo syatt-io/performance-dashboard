@@ -4,9 +4,24 @@ import { prisma } from './database';
 // Parse Redis connection options
 function getRedisConfig() {
   if (process.env.REDIS_URL) {
-    // Bull can accept a Redis URL directly as a string
-    // But we need to ensure it's in the right format
     console.log('[Queue] Using REDIS_URL for connection');
+
+    // For Upstash Redis (rediss:// URLs), parse and add TLS config
+    if (process.env.REDIS_URL.startsWith('rediss://')) {
+      const url = new URL(process.env.REDIS_URL);
+      return {
+        host: url.hostname,
+        port: parseInt(url.port) || 6379,
+        password: url.password,
+        tls: {
+          rejectUnauthorized: false, // Required for Upstash
+        },
+        maxRetriesPerRequest: 3,
+        enableReadyCheck: false,
+        connectTimeout: 10000,
+      };
+    }
+
     return process.env.REDIS_URL;
   }
 
