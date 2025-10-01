@@ -239,6 +239,7 @@ export function usePerformanceDashboard() {
   }, [setCollectionError, handleCollectMetrics]);
 
   const handleSelectSite = useCallback((site: Site) => {
+    console.log('✅ handleSelectSite: Setting selected site to:', site.name, 'ID:', site.id);
     setSelectedSite(site);
   }, [setSelectedSite]);
 

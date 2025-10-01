@@ -105,14 +105,19 @@ function HomeContent() {
 
   // Restore state from URL on mount
   useEffect(() => {
+    console.log('🔄 URL Restoration Effect: Running', { sitesCount: sites.length, loading, siteIdFromURL: searchParams.get('site'), currentSelectedSite: selectedSite?.name });
     if (!sites.length || loading) return;
 
     const siteId = searchParams.get('site');
     if (siteId) {
       const site = sites.find(s => s.id === siteId);
+      console.log('🔄 URL Restoration Effect: Found site from URL:', site?.name);
       if (site && (!selectedSite || selectedSite.id !== siteId)) {
+        console.log('🔄 URL Restoration Effect: Restoring site:', site.name, 'ID:', site.id);
         handleSelectSite(site);
         setViewMode('detail');
+      } else {
+        console.log('🔄 URL Restoration Effect: Skipping restore (already selected or not found)');
       }
     }
     setInitialRestoreDone(true);
@@ -126,8 +131,10 @@ function HomeContent() {
     const params = new URLSearchParams(searchParams.toString());
 
     if (viewMode === 'detail' && selectedSite) {
+      console.log('🌐 URL Update Effect: Setting URL to site:', selectedSite.name, 'ID:', selectedSite.id);
       params.set('site', selectedSite.id);
     } else {
+      console.log('🌐 URL Update Effect: Clearing site from URL (viewMode:', viewMode, ')');
       params.delete('site');
     }
 
@@ -188,6 +195,7 @@ function HomeContent() {
   };
 
   const handleSiteSelectFromOverview = (site: any) => {
+    console.log('📍 handleSiteSelectFromOverview: Selecting site:', site.name, 'ID:', site.id);
     handleSelectSite(site);
     setViewMode('detail');
   };

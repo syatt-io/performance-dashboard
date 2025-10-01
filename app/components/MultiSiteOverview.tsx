@@ -541,7 +541,10 @@ export default function MultiSiteOverview({ sites, onSiteSelect }: MultiSiteOver
                 }
 
                 return (
-                <tr key={item.site.id} className={rowClasses} onClick={() => onSiteSelect(item.site)}>
+                <tr key={item.site.id} className={rowClasses} onClick={() => {
+                  console.log('🔍 MultiSiteOverview: Clicked on site:', item.site.name, 'ID:', item.site.id);
+                  onSiteSelect(item.site);
+                }}>
                   <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                     <div>
                       <div className="flex items-center">
