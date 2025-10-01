@@ -100,6 +100,9 @@ function HomeContent() {
     shopifyDomain: ''
   });
 
+  // Track if we've completed initial URL restoration
+  const [initialRestoreDone, setInitialRestoreDone] = useState(false);
+
   // Restore state from URL on mount
   useEffect(() => {
     if (!sites.length || loading) return;
@@ -112,10 +115,14 @@ function HomeContent() {
         setViewMode('detail');
       }
     }
+    setInitialRestoreDone(true);
   }, [sites, loading, searchParams]);
 
   // Update URL when site selection or view mode changes
+  // Only run after initial restoration is complete to avoid clearing URL on page load
   useEffect(() => {
+    if (!initialRestoreDone) return;
+
     const params = new URLSearchParams(searchParams.toString());
 
     if (viewMode === 'detail' && selectedSite) {
@@ -126,7 +133,7 @@ function HomeContent() {
 
     const newUrl = params.toString() ? `?${params.toString()}` : '/';
     router.replace(newUrl, { scroll: false });
-  }, [selectedSite, viewMode]);
+  }, [selectedSite, viewMode, initialRestoreDone]);
 
   // Modal handlers
   const handleOpenAddModal = () => {
