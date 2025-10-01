@@ -147,7 +147,7 @@ export default function Home() {
   };
 
   const handleSiteSelectFromOverview = (site: any) => {
-    handleSelectSite(site.id);
+    handleSelectSite(site);
     setViewMode('detail');
   };
 
