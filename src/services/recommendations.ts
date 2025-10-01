@@ -93,11 +93,13 @@ export class RecommendationsService {
         title: 'Critical: Very Slow Largest Contentful Paint',
         description: `Your LCP is ${lcp.toFixed(2)}s, significantly slower than the recommended 2.5s. This severely impacts user experience and conversion rates.`,
         actionableSteps: [
-          'Optimize and compress your hero/largest image using WebP or AVIF format',
-          'Implement lazy loading for below-the-fold images',
-          'Use a CDN to serve images from edge locations',
-          'Add width and height attributes to prevent layout shifts',
-          'Consider using responsive images with srcset'
+          'Shopify: Use image_url filter with format parameter: {{ product.featured_image | image_url: width: 800, format: "webp" }}',
+          'Preload your LCP image: <link rel="preload" as="image" href="hero-image.webp" fetchpriority="high">',
+          'Compress images with TinyPNG, Squoosh, or Shopify\'s built-in optimization',
+          'Add width/height to prevent layout shift: <img src="..." width="800" height="600" loading="eager">',
+          'For hero images, use eager loading (loading="eager") and fetchpriority="high"',
+          'Use Shopify CDN by default - ensure images are served from cdn.shopify.com',
+          'Test with: Chrome DevTools → Performance → Find LCP element → Optimize it specifically'
         ],
         estimatedImpact: `Improving LCP to 2.5s could improve conversions by ~${((lcp - 2.5) * 7).toFixed(1)}%`,
         status: 'active'
@@ -112,10 +114,12 @@ export class RecommendationsService {
         title: 'Warning: Largest Contentful Paint Needs Improvement',
         description: `Your LCP is ${lcp.toFixed(2)}s, which needs improvement (target: <2.5s).`,
         actionableSteps: [
-          'Compress your largest content image without quality loss',
-          'Preload critical images using <link rel="preload">',
-          'Optimize server response time for faster image delivery',
-          'Remove render-blocking resources above the fold'
+          'Shopify: Convert product images to WebP: {{ image | image_url: width: 800, format: "webp" }}',
+          'Preload LCP image: <link rel="preload" as="image" href="hero.webp" fetchpriority="high">',
+          'Add fetchpriority="high" to your hero/banner image',
+          'Ensure images use Shopify CDN (cdn.shopify.com) not external CDNs',
+          'Use Chrome DevTools Lighthouse to identify exact LCP element',
+          'Defer non-critical CSS and JavaScript that blocks rendering'
         ],
         estimatedImpact: `Improving LCP to 2.5s could improve conversions by ~${((lcp - 2.5) * 7).toFixed(1)}%`,
         status: 'active'
@@ -144,11 +148,13 @@ export class RecommendationsService {
         title: 'Critical: High Cumulative Layout Shift',
         description: `Your CLS score is ${cls.toFixed(3)}, causing significant visual instability (target: <0.1). This frustrates users and hurts conversions.`,
         actionableSteps: [
-          'Add explicit width and height attributes to ALL images and embeds',
-          'Reserve space for ad slots and dynamic content',
-          'Avoid inserting content above existing content',
-          'Use CSS aspect-ratio to prevent layout shifts',
-          'Preload custom fonts and use font-display: swap'
+          'Add width/height to ALL images: <img src="..." width="800" height="600"> (required for CLS)',
+          'Shopify: Use image_url with explicit dimensions: {{ image | image_url: width: 800, height: 600 }}',
+          'Reserve space with CSS: .banner { aspect-ratio: 16/9; } or min-height',
+          'For fonts: Add <link rel="preload" as="font"> and use font-display: swap in CSS',
+          'Avoid injecting content above fold - banners/announcements cause major CLS',
+          'Test CLS sources: Chrome DevTools → Performance → Experience → Layout Shifts',
+          'Fix common Shopify theme issues: lazy-loaded hero images, dynamic announcement bars'
         ],
         estimatedImpact: 'Fixing CLS could improve conversions by up to 12%',
         status: 'active'
@@ -163,10 +169,12 @@ export class RecommendationsService {
         title: 'Warning: Layout Shift Needs Improvement',
         description: `Your CLS score is ${cls.toFixed(3)}, which needs improvement (target: <0.1).`,
         actionableSteps: [
-          'Add width/height dimensions to images missing them',
-          'Review dynamically injected content for layout shifts',
-          'Set explicit sizes for ad slots',
-          'Use transform animations instead of properties that trigger layout'
+          'Audit all images for missing width/height: Check <img> tags and CSS backgrounds',
+          'Shopify specific: Check theme.liquid for dynamically injected announcement bars',
+          'Set min-height on containers that load dynamic content (reviews, related products)',
+          'Use aspect-ratio CSS: .product-image { aspect-ratio: 1/1; }',
+          'Preload web fonts: <link rel="preload" href="font.woff2" as="font" type="font/woff2" crossorigin>',
+          'Review Shopify app embeds - they often inject content causing CLS'
         ],
         estimatedImpact: 'Improving CLS could increase conversions by 4-6%',
         status: 'active'
@@ -380,11 +388,13 @@ export class RecommendationsService {
         title: 'High Third-Party Blocking Time',
         description: `Third-party scripts are blocking for ${blockingTime.toFixed(0)}ms. Apps and tracking scripts are slowing down your site.`,
         actionableSteps: [
-          'Audit installed Shopify apps and remove unused ones',
-          'Defer or async load non-critical third-party scripts',
-          'Review analytics and tracking scripts - consolidate if possible',
-          'Consider app alternatives with better performance',
-          'Use Shopify\'s Web Pixels for analytics instead of custom scripts'
+          'Shopify Admin → Apps → Remove unused apps (each app adds ~50-200ms)',
+          'Audit app scripts: Online Store → Themes → Actions → Edit Code → Check theme.liquid and layout files',
+          'Replace heavy apps: Reviews, popups, chat widgets often have lighter alternatives',
+          'Use Shopify Web Pixels (GA4, Meta Pixel) instead of custom tracking scripts',
+          'Defer scripts: <script src="..." defer> or move to {{ content_for_footer }}',
+          'Common culprits: Klaviyo, Yotpo, Privy, Gorgias - check if you need all features',
+          'Test performance impact: Disable apps one-by-one and re-run Lighthouse'
         ],
         estimatedImpact: 'Reducing third-party scripts can improve TTI by 20-30%',
         status: 'active'

@@ -1,5 +1,6 @@
 import { prisma } from './database';
 import { performanceCollector } from './lighthouse';
+import { insightsService } from './insights';
 
 export interface LighthouseMetrics {
   performance: number;
@@ -90,6 +91,16 @@ export async function collectAndSaveMetrics(
     });
 
     console.log(`[Worker] Saved metrics for ${site.name} (${deviceType}): Performance ${metrics.performance}`);
+
+    // Auto-generate insights after metrics are saved
+    try {
+      console.log(`[Worker] Auto-generating insights for ${site.name}...`);
+      await insightsService.runFullAnalysis(siteId);
+      console.log(`[Worker] Insights generated successfully for ${site.name}`);
+    } catch (insightError) {
+      console.error(`[Worker] Failed to generate insights for ${site.name}:`, insightError);
+      // Don't fail the entire job if insights generation fails
+    }
 
     // Update job status to completed
     if (scheduledJobId) {
