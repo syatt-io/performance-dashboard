@@ -8,6 +8,7 @@ import { useApp } from './context/AppContext';
 import SiteCard from './components/SiteCard';
 import SiteDashboard from './components/SiteDashboard';
 import SiteInsights from './components/SiteInsights';
+import PerPageMetrics from './components/PerPageMetrics';
 import MultiSiteOverview from './components/MultiSiteOverview';
 import SiteComparison from './components/SiteComparison';
 import SiteModal from './components/modals/SiteModal';
@@ -97,7 +98,9 @@ function HomeContent() {
   const [siteFormData, setSiteFormData] = useState({
     name: '',
     url: '',
-    shopifyDomain: ''
+    shopifyDomain: '',
+    categoryUrl: '',
+    productUrl: ''
   });
 
   // Track if we've completed initial URL restoration
@@ -144,7 +147,7 @@ function HomeContent() {
 
   // Modal handlers
   const handleOpenAddModal = () => {
-    setSiteFormData({ name: '', url: '', shopifyDomain: '' });
+    setSiteFormData({ name: '', url: '', shopifyDomain: '', categoryUrl: '', productUrl: '' });
     setShowAddSiteModal(true);
   };
 
@@ -153,7 +156,9 @@ function HomeContent() {
     setSiteFormData({
       name: site.name,
       url: site.url,
-      shopifyDomain: site.shopifyDomain || ''
+      shopifyDomain: site.shopifyDomain || '',
+      categoryUrl: site.categoryUrl || '',
+      productUrl: site.productUrl || ''
     });
     setShowEditSiteModal(true);
   };
@@ -321,6 +326,13 @@ function HomeContent() {
                     <SiteInsights siteId={selectedSite.id} />
                   </ComponentErrorBoundary>
                 </div>
+              )}
+
+              {/* Per-Page Metrics Section */}
+              {metrics && metrics.length > 0 && (
+                <ComponentErrorBoundary>
+                  <PerPageMetrics metrics={metrics} />
+                </ComponentErrorBoundary>
               )}
             </>
           ) : selectedSite ? (

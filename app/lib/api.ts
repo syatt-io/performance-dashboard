@@ -19,6 +19,8 @@ export interface Site {
   name: string;
   url: string;
   shopifyDomain?: string;
+  categoryUrl?: string | null;
+  productUrl?: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -32,6 +34,7 @@ export interface PerformanceMetric {
   id: string;
   timestamp: string;
   deviceType: 'mobile' | 'desktop';
+  pageType?: 'homepage' | 'category' | 'product'; // Type of page tested
   lcp?: number;
   fid?: number;
   cls?: number;
@@ -88,7 +91,7 @@ export const api = {
     return res.json();
   },
 
-  async createSite(site: { name: string; url: string; shopifyDomain?: string }): Promise<Site> {
+  async createSite(site: { name: string; url: string; shopifyDomain?: string; categoryUrl?: string; productUrl?: string }): Promise<Site> {
     const res = await fetch(`${API_BASE}/sites`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -104,7 +107,7 @@ export const api = {
     return res.json();
   },
 
-  async updateSite(id: string, updates: { name?: string; url?: string; shopifyDomain?: string; isActive?: boolean }): Promise<Site> {
+  async updateSite(id: string, updates: { name?: string; url?: string; shopifyDomain?: string; categoryUrl?: string; productUrl?: string; isActive?: boolean }): Promise<Site> {
     const res = await fetch(`${API_BASE}/sites/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },

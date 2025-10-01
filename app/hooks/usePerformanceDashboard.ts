@@ -188,12 +188,14 @@ export function usePerformanceDashboard() {
     }
   }, [state.selectedSite, setCollecting, setCollectionError]);
 
-  const handleAddSite = useCallback(async (siteData: { name: string; url: string; shopifyDomain?: string }) => {
+  const handleAddSite = useCallback(async (siteData: { name: string; url: string; shopifyDomain?: string; categoryUrl?: string; productUrl?: string }) => {
     try {
       const site = await api.createSite({
         name: siteData.name,
         url: siteData.url,
         shopifyDomain: siteData.shopifyDomain || undefined,
+        categoryUrl: siteData.categoryUrl || undefined,
+        productUrl: siteData.productUrl || undefined,
       });
       addSite(site);
     } catch (error) {
@@ -202,12 +204,14 @@ export function usePerformanceDashboard() {
     }
   }, [addSite]);
 
-  const handleUpdateSite = useCallback(async (siteId: string, siteData: { name: string; url: string; shopifyDomain?: string }) => {
+  const handleUpdateSite = useCallback(async (siteId: string, siteData: { name: string; url: string; shopifyDomain?: string; categoryUrl?: string; productUrl?: string }) => {
     try {
       const updatedSite = await api.updateSite(siteId, {
         name: siteData.name,
         url: siteData.url,
         shopifyDomain: siteData.shopifyDomain || undefined,
+        categoryUrl: siteData.categoryUrl || undefined,
+        productUrl: siteData.productUrl || undefined,
       });
       updateSite(updatedSite);
     } catch (error) {

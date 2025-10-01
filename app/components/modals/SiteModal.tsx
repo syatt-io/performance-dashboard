@@ -6,7 +6,7 @@ import { Site } from '../../lib/api';
 interface SiteModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (siteData: { name: string; url: string; shopifyDomain: string }) => void;
+  onSubmit: (siteData: { name: string; url: string; shopifyDomain: string; categoryUrl?: string; productUrl?: string }) => void;
   title: string;
   submitText: string;
   site?: Site | null;
@@ -14,8 +14,10 @@ interface SiteModalProps {
     name: string;
     url: string;
     shopifyDomain: string;
+    categoryUrl: string;
+    productUrl: string;
   };
-  onDataChange: (data: { name: string; url: string; shopifyDomain: string }) => void;
+  onDataChange: (data: { name: string; url: string; shopifyDomain: string; categoryUrl: string; productUrl: string }) => void;
 }
 
 const SiteModal = memo(function SiteModal({
@@ -83,6 +85,38 @@ const SiteModal = memo(function SiteModal({
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="my-store"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Category Page URL (optional)
+            </label>
+            <input
+              type="url"
+              value={initialData.categoryUrl}
+              onChange={(e) => handleInputChange('categoryUrl', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="https://my-store.com/collections/all"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              URL of a collection/category page to test
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Product Page URL (optional)
+            </label>
+            <input
+              type="url"
+              value={initialData.productUrl}
+              onChange={(e) => handleInputChange('productUrl', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="https://my-store.com/products/example-product"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              URL of a product detail page to test
+            </p>
           </div>
 
           <div className="flex justify-end space-x-3 mt-6">
