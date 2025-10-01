@@ -290,7 +290,7 @@ function HomeContent() {
       ) : (
         <div className="w-full">
           {/* Metrics Dashboard - Full Width */}
-          {selectedSite && summary ? (
+          {selectedSite && (summary || collecting) ? (
             <>
               <ComponentErrorBoundary>
                 <SiteDashboard
@@ -307,24 +307,24 @@ function HomeContent() {
               </ComponentErrorBoundary>
 
               {/* Performance Insights Section */}
-              <div className="mt-6">
-                <ComponentErrorBoundary>
-                  <SiteInsights siteId={selectedSite.id} />
-                </ComponentErrorBoundary>
-              </div>
+              {summary && (
+                <div className="mt-6">
+                  <ComponentErrorBoundary>
+                    <SiteInsights siteId={selectedSite.id} />
+                  </ComponentErrorBoundary>
+                </div>
+              )}
             </>
           ) : selectedSite ? (
             <div className="bg-white rounded-lg shadow p-8 text-center">
               <div className="text-gray-500 mb-4">
-                {collecting ? 'Running performance analysis...' : 'No performance data available'}
+                No performance data available
               </div>
-              {!collecting && (
-                <div className="text-sm text-gray-400">
-                  Click "Run Test" to analyze this site's performance using real Lighthouse data.
-                  <br />
-                  Note: Performance testing may take 30-60 seconds to complete.
-                </div>
-              )}
+              <div className="text-sm text-gray-400">
+                Click "Run Test" to analyze this site's performance using real Lighthouse data.
+                <br />
+                Note: Performance testing may take 30-60 seconds to complete.
+              </div>
             </div>
           ) : (
             <div className="bg-white rounded-lg shadow p-8 text-center">

@@ -8,7 +8,7 @@ import ShopifyMetrics from './ShopifyMetrics';
 
 interface SiteDashboardProps {
   site: Site;
-  summary: MetricsSummary;
+  summary: MetricsSummary | null;
   metrics: PerformanceMetric[];
   collecting: boolean;
   collectionError: string | null;
@@ -56,7 +56,7 @@ const SiteDashboard = memo(function SiteDashboard({
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">{summary.siteName}</h2>
+            <h2 className="text-2xl font-bold text-gray-900">{summary?.siteName || site.name}</h2>
             <p className="text-gray-600">{site.url}</p>
           </div>
 
@@ -118,12 +118,24 @@ const SiteDashboard = memo(function SiteDashboard({
           </div>
         )}
 
-        {summary.lastUpdated && (
+        {summary?.lastUpdated && (
           <p className="text-sm text-gray-500 mt-2">
             Last updated: {new Date(summary.lastUpdated).toLocaleString()}
           </p>
         )}
       </div>
+
+      {!summary && !collecting && (
+        <div className="bg-white rounded-lg shadow p-8 text-center">
+          <div className="text-gray-500 mb-4">No performance data available</div>
+          <div className="text-sm text-gray-400">
+            Click "Run Test" above to analyze this site's performance.
+          </div>
+        </div>
+      )}
+
+      {summary && (
+        <>
 
       {/* Core Web Vitals */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -413,6 +425,8 @@ const SiteDashboard = memo(function SiteDashboard({
         {/* Shopify-specific Metrics */}
         <ShopifyMetrics metrics={metrics} />
       </div>
+      </>
+      )}
     </div>
   );
 });
