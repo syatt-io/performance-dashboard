@@ -108,20 +108,14 @@ function HomeContent() {
 
   // Restore state from URL on mount ONLY (not on subsequent URL changes)
   useEffect(() => {
-    console.log('🔄 URL Restoration Effect: Running', { sitesCount: sites.length, loading, siteIdFromURL: searchParams.get('site'), currentSelectedSite: selectedSite?.name, initialRestoreDone });
-
-    // Only restore from URL on initial page load, not on subsequent URL updates
-    if (initialRestoreDone) {
-      console.log('🔄 URL Restoration Effect: Skipping - initial restore already done');
-      return;
-    }
-
-    if (!sites.length || loading) return;
+    // Only run once when sites are loaded and we haven't restored yet
+    if (initialRestoreDone || !sites.length || loading) return;
 
     const siteId = searchParams.get('site');
+    console.log('🔄 URL Restoration Effect: Initial restore', { siteId, sitesCount: sites.length });
+
     if (siteId) {
       const site = sites.find(s => s.id === siteId);
-      console.log('🔄 URL Restoration Effect: Found site from URL:', site?.name);
       if (site) {
         console.log('🔄 URL Restoration Effect: Restoring site:', site.name, 'ID:', site.id);
         handleSelectSite(site);
@@ -129,7 +123,8 @@ function HomeContent() {
       }
     }
     setInitialRestoreDone(true);
-  }, [sites, loading, searchParams]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sites, loading]); // Removed searchParams from dependencies to prevent re-running
 
   // Update URL when site selection or view mode changes
   // Only run after initial restoration is complete to avoid clearing URL on page load
