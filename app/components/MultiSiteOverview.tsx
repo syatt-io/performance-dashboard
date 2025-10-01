@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Site, MetricsSummary, api } from '../lib/api';
-import { AlertCircle, TrendingUp, TrendingDown, Activity, CheckCircle, Clock, Loader2, ChevronUp, ChevronDown } from 'lucide-react';
+import { AlertCircle, TrendingUp, TrendingDown, Activity, CheckCircle, Clock, Loader2, ChevronUp, ChevronDown, Edit, Trash2 } from 'lucide-react';
 
 interface MultiSiteData {
   site: Site;
@@ -16,12 +16,14 @@ interface MultiSiteData {
 interface MultiSiteOverviewProps {
   sites: Site[];
   onSiteSelect: (site: Site) => void;
+  onEdit?: (site: Site) => void;
+  onDelete?: (site: Site) => void;
 }
 
 type SortField = 'name' | 'mobileScore' | 'desktopScore' | 'tbt' | 'lcp' | 'cls' | 'fcp' | 'speedIndex' | 'lastUpdated';
 type SortDirection = 'asc' | 'desc';
 
-export default function MultiSiteOverview({ sites, onSiteSelect }: MultiSiteOverviewProps) {
+export default function MultiSiteOverview({ sites, onSiteSelect, onEdit, onDelete }: MultiSiteOverviewProps) {
   const [siteData, setSiteData] = useState<MultiSiteData[]>([]);
   const [loading, setLoading] = useState(true);
   const [collectingAll, setCollectingAll] = useState(false);
@@ -527,6 +529,11 @@ export default function MultiSiteOverview({ sites, onSiteSelect }: MultiSiteOver
                 <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
+                {(onEdit || onDelete) && (
+                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -793,6 +800,32 @@ export default function MultiSiteOverview({ sites, onSiteSelect }: MultiSiteOver
                       )}
                     </div>
                   </td>
+
+                  {/* Actions Column */}
+                  {(onEdit || onDelete) && (
+                    <td className="px-3 sm:px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center space-x-2">
+                        {onEdit && (
+                          <button
+                            onClick={() => onEdit(item.site)}
+                            className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                            title="Edit site"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                        )}
+                        {onDelete && (
+                          <button
+                            onClick={() => onDelete(item.site)}
+                            className="p-1 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                            title="Delete site"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  )}
                 </tr>
                 );
               })}

@@ -296,7 +296,12 @@ function HomeContent() {
             </div>
           ) : (
             <ComponentErrorBoundary>
-              <MultiSiteOverview sites={sites} onSiteSelect={handleSiteSelectFromOverview} />
+              <MultiSiteOverview
+                sites={sites}
+                onSiteSelect={handleSiteSelectFromOverview}
+                onEdit={handleOpenEditModal}
+                onDelete={handleOpenDeleteModal}
+              />
             </ComponentErrorBoundary>
           )}
         </div>
