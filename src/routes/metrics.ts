@@ -138,11 +138,13 @@ router.post('/sites/:siteId/collect', metricsCollectionLimiter, async (req: Requ
       });
     }
 
-    // Use comprehensive multi-page testing if category or product URLs are configured
-    const useComprehensive = !!(site.categoryUrl || site.productUrl);
+    // Always use comprehensive testing mode: tests all configured pages with 3 runs per page/device,
+    // takes median results. This ensures consistent, reliable data even for homepage-only sites.
+    const useComprehensive = true; // Always run 3 tests and take median for reliability
 
     if (useComprehensive) {
-      // Comprehensive mode: single job tests all pages, devices, with multiple runs
+      // Comprehensive mode: single job tests all pages (homepage + optional category/product),
+      // both devices, with 3 runs each for median calculation
       const scheduledJob = await prisma.scheduledJob.create({
         data: {
           siteId,
@@ -160,6 +162,11 @@ router.post('/sites/:siteId/collect', metricsCollectionLimiter, async (req: Requ
 
       logger.info(`🚀 Queued comprehensive testing job for site ${siteId}`);
 
+      // Build dynamic note based on which pages are configured
+      const pages = ['homepage'];
+      if (site.categoryUrl) pages.push('category');
+      if (site.productUrl) pages.push('product');
+
       res.json({
         message: `Comprehensive performance testing queued for site ${site.name}`,
         siteId,
@@ -169,7 +176,7 @@ router.post('/sites/:siteId/collect', metricsCollectionLimiter, async (req: Requ
           id: scheduledJob.id,
           status: scheduledJob.status,
           queueJobId: (queueJob as { id?: string })?.id || 'unknown',
-          note: 'Testing homepage, category, and product pages on mobile and desktop with 3 runs each'
+          note: `Testing ${pages.join(', ')} page${pages.length > 1 ? 's' : ''} on mobile and desktop with 3 runs each (median calculated)`
         }]
       });
     } else {
