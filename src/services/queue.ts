@@ -81,8 +81,9 @@ performanceQueue.on('ready', () => {
 // Job types
 export interface PerformanceJobData {
   siteId: string;
-  deviceType: 'mobile' | 'desktop';
+  deviceType?: 'mobile' | 'desktop'; // Optional when comprehensive is true
   scheduledJobId?: string;
+  comprehensive?: boolean; // Enable multi-page, multi-device, multi-run testing
 }
 
 // Add job to queue

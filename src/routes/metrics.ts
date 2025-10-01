@@ -138,18 +138,11 @@ router.post('/sites/:siteId/collect', metricsCollectionLimiter, async (req: Requ
       });
     }
 
-    // Create monitoring jobs and add to queue (safer than setImmediate)
-    interface JobRecord {
-      scheduledJob: Prisma.ScheduledJobGetPayload<Record<string, never>>;
-      device: string;
-      queueJob: unknown;
-    }
-    const jobs: JobRecord[] = [];
-    const deviceTypes = deviceType && ['mobile', 'desktop'].includes(deviceType)
-      ? [deviceType]
-      : ['mobile', 'desktop'];
+    // Use comprehensive multi-page testing if category or product URLs are configured
+    const useComprehensive = !!(site.categoryUrl || site.productUrl);
 
-    for (const device of deviceTypes) {
+    if (useComprehensive) {
+      // Comprehensive mode: single job tests all pages, devices, with multiple runs
       const scheduledJob = await prisma.scheduledJob.create({
         data: {
           siteId,
@@ -159,29 +152,72 @@ router.post('/sites/:siteId/collect', metricsCollectionLimiter, async (req: Requ
         }
       });
 
-      // Add to Bull queue instead of running in background with setImmediate
       const queueJob = await addPerformanceJob({
         siteId,
-        deviceType: device as 'mobile' | 'desktop',
-        scheduledJobId: scheduledJob.id
+        scheduledJobId: scheduledJob.id,
+        comprehensive: true
       });
 
-      jobs.push({ scheduledJob, device, queueJob });
+      logger.info(`🚀 Queued comprehensive testing job for site ${siteId}`);
+
+      res.json({
+        message: `Comprehensive performance testing queued for site ${site.name}`,
+        siteId,
+        url: site.url,
+        mode: 'comprehensive',
+        jobs: [{
+          id: scheduledJob.id,
+          status: scheduledJob.status,
+          queueJobId: (queueJob as { id?: string })?.id || 'unknown',
+          note: 'Testing homepage, category, and product pages on mobile and desktop with 3 runs each'
+        }]
+      });
+    } else {
+      // Legacy mode: separate jobs for mobile and desktop (homepage only)
+      interface JobRecord {
+        scheduledJob: Prisma.ScheduledJobGetPayload<Record<string, never>>;
+        device: string;
+        queueJob: unknown;
+      }
+      const jobs: JobRecord[] = [];
+      const deviceTypes = deviceType && ['mobile', 'desktop'].includes(deviceType)
+        ? [deviceType]
+        : ['mobile', 'desktop'];
+
+      for (const device of deviceTypes) {
+        const scheduledJob = await prisma.scheduledJob.create({
+          data: {
+            siteId,
+            jobType: 'lighthouse',
+            status: 'pending',
+            scheduledFor: new Date()
+          }
+        });
+
+        const queueJob = await addPerformanceJob({
+          siteId,
+          deviceType: device as 'mobile' | 'desktop',
+          scheduledJobId: scheduledJob.id
+        });
+
+        jobs.push({ scheduledJob, device, queueJob });
+      }
+
+      logger.info(`🚀 Queued ${jobs.length} collection jobs for site ${siteId}`);
+
+      res.json({
+        message: `Performance collection queued for site ${site.name}`,
+        siteId,
+        url: site.url,
+        mode: 'standard',
+        jobs: jobs.map(j => ({
+          id: j.scheduledJob.id,
+          status: j.scheduledJob.status,
+          queueJobId: (j.queueJob as { id?: string })?.id || 'unknown',
+          device: j.device
+        }))
+      });
     }
-
-    logger.info(`🚀 Queued ${jobs.length} collection jobs for site ${siteId}`);
-
-    res.json({
-      message: `Performance collection queued for site ${site.name}`,
-      siteId,
-      url: site.url,
-      jobs: jobs.map(j => ({
-        id: j.scheduledJob.id,
-        status: j.scheduledJob.status,
-        queueJobId: (j.queueJob as { id?: string })?.id || 'unknown',
-        device: j.device
-      }))
-    });
   } catch (error) {
     logger.error('Error starting collection:', { error, siteId: req.params.siteId });
     res.status(500).json({ error: 'Failed to start metrics collection' });
