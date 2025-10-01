@@ -106,21 +106,26 @@ function HomeContent() {
   // Track if we've completed initial URL restoration
   const [initialRestoreDone, setInitialRestoreDone] = useState(false);
 
-  // Restore state from URL on mount
+  // Restore state from URL on mount ONLY (not on subsequent URL changes)
   useEffect(() => {
-    console.log('🔄 URL Restoration Effect: Running', { sitesCount: sites.length, loading, siteIdFromURL: searchParams.get('site'), currentSelectedSite: selectedSite?.name });
+    console.log('🔄 URL Restoration Effect: Running', { sitesCount: sites.length, loading, siteIdFromURL: searchParams.get('site'), currentSelectedSite: selectedSite?.name, initialRestoreDone });
+
+    // Only restore from URL on initial page load, not on subsequent URL updates
+    if (initialRestoreDone) {
+      console.log('🔄 URL Restoration Effect: Skipping - initial restore already done');
+      return;
+    }
+
     if (!sites.length || loading) return;
 
     const siteId = searchParams.get('site');
     if (siteId) {
       const site = sites.find(s => s.id === siteId);
       console.log('🔄 URL Restoration Effect: Found site from URL:', site?.name);
-      if (site && (!selectedSite || selectedSite.id !== siteId)) {
+      if (site) {
         console.log('🔄 URL Restoration Effect: Restoring site:', site.name, 'ID:', site.id);
         handleSelectSite(site);
         setViewMode('detail');
-      } else {
-        console.log('🔄 URL Restoration Effect: Skipping restore (already selected or not found)');
       }
     }
     setInitialRestoreDone(true);
