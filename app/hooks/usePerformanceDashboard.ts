@@ -61,13 +61,17 @@ export function usePerformanceDashboard() {
       }
     };
 
-    // Initial poll
-    pollJobStatus();
+    // Delay initial poll by 3 seconds to allow backend to queue the job
+    // This prevents race condition where we check status before job is queued
+    const initialTimeout = setTimeout(pollJobStatus, 3000);
 
     // Poll every 2 seconds while collecting
     const interval = setInterval(pollJobStatus, 2000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(initialTimeout);
+      clearInterval(interval);
+    };
   }, [state.selectedSite, state.collecting]);
 
   const loadSites = useCallback(async () => {
