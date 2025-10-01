@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, CheckCircle, Info, TrendingUp, AlertCircle, X, ThumbsDown } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Info, AlertCircle, X, ThumbsDown } from 'lucide-react';
 
 interface Recommendation {
   id: string;
@@ -58,7 +58,6 @@ interface SiteInsightsProps {
 export default function SiteInsights({ siteId, onClose }: SiteInsightsProps) {
   const [insights, setInsights] = useState<SiteInsights | null>(null);
   const [loading, setLoading] = useState(true);
-  const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedActions, setExpandedActions] = useState<Set<string>>(new Set());
 
@@ -83,22 +82,6 @@ export default function SiteInsights({ siteId, onClose }: SiteInsightsProps) {
     }
   };
 
-  const runAnalysis = async () => {
-    try {
-      setAnalyzing(true);
-      setError(null);
-      const response = await fetch(`${API_BASE_URL}/api/insights/sites/${siteId}/analyze`, {
-        method: 'POST'
-      });
-      if (!response.ok) throw new Error('Failed to run analysis');
-      const data = await response.json();
-      setInsights(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to run analysis');
-    } finally {
-      setAnalyzing(false);
-    }
-  };
 
   const resolveRecommendation = async (recId: string) => {
     try {
@@ -220,18 +203,10 @@ export default function SiteInsights({ siteId, onClose }: SiteInsightsProps) {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Performance Insights</h2>
-            <p className="text-gray-600 mt-1">AI-powered recommendations and anomaly detection</p>
+            <p className="text-gray-600 mt-1">AI-powered recommendations and anomaly detection • Auto-updates with each test</p>
           </div>
           <div className="flex items-center space-x-3">
             {getHealthBadge(insights.summary.overallHealth)}
-            <button
-              onClick={runAnalysis}
-              disabled={analyzing}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-            >
-              <TrendingUp className={`w-4 h-4 ${analyzing ? 'animate-spin' : ''}`} />
-              <span>{analyzing ? 'Analyzing...' : 'Run Analysis'}</span>
-            </button>
             {onClose && (
               <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
                 <X className="w-5 h-5" />
