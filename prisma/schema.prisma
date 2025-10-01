@@ -20,9 +20,11 @@ model Site {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  metrics       PerformanceMetric[]
-  scheduledJobs ScheduledJob[]
-  testRuns      PerformanceTestRun[]
+  metrics         PerformanceMetric[]
+  scheduledJobs   ScheduledJob[]
+  testRuns        PerformanceTestRun[]
+  recommendations Recommendation[]
+  anomalies       Anomaly[]
 
   @@map("sites")
 }
@@ -143,4 +145,51 @@ model PerformanceTestRun {
   @@index([batchId])
   @@index([timestamp(sort: Desc)])
   @@map("performance_test_runs")
+}
+
+model Recommendation {
+  id              String   @id @default(uuid())
+  siteId          String   @map("site_id")
+  metricId        String?  @map("metric_id")
+  severity        String   // 'critical' | 'warning' | 'info'
+  category        String   // 'images' | 'javascript' | 'css' | 'fonts' | 'shopify-apps' | 'infrastructure'
+  metric          String   // Which metric triggered this (LCP, CLS, etc.)
+  title           String
+  description     String
+  actionableSteps String   @map("actionable_steps") // JSON array
+  estimatedImpact String?  @map("estimated_impact")
+  status          String   @default("active") // 'active' | 'resolved' | 'dismissed'
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  resolvedAt      DateTime? @map("resolved_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@index([siteId, status])
+  @@index([siteId, createdAt(sort: Desc)])
+  @@index([severity, status])
+  @@map("recommendations")
+}
+
+model Anomaly {
+  id                   String   @id @default(uuid())
+  siteId               String   @map("site_id")
+  metricId             String   @map("metric_id")
+  metric               String   // Which metric (LCP, CLS, etc.)
+  currentValue         Float    @map("current_value")
+  expectedMin          Float    @map("expected_min")
+  expectedMax          Float    @map("expected_max")
+  standardDeviations   Float    @map("standard_deviations")
+  confidence           Float    // 0-1
+  status               String   @default("active") // 'active' | 'resolved' | 'false_positive'
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+  resolvedAt           DateTime? @map("resolved_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@index([siteId, status])
+  @@index([siteId, createdAt(sort: Desc)])
+  @@index([metric, status])
+  @@map("anomalies")
 }

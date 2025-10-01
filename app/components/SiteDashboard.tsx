@@ -358,8 +358,8 @@ const SiteDashboard = memo(function SiteDashboard({
 
           <MetricsChart
             metrics={metrics}
-            metric="fid"
-            title="First Input Delay (FID)"
+            metric="inp"
+            title="Interaction to Next Paint (INP)"
             unit="ms"
             dateRange={dateRange}
             onDateRangeChange={handleDateRangeChange}

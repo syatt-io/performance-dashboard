@@ -6,6 +6,7 @@ import { usePerformanceDashboard } from './hooks/usePerformanceDashboard';
 import { useApp } from './context/AppContext';
 import SiteCard from './components/SiteCard';
 import SiteDashboard from './components/SiteDashboard';
+import SiteInsights from './components/SiteInsights';
 import MultiSiteOverview from './components/MultiSiteOverview';
 import SiteComparison from './components/SiteComparison';
 import SiteModal from './components/modals/SiteModal';
@@ -146,6 +147,7 @@ export default function Home() {
   };
 
   const handleSiteSelectFromOverview = (site: any) => {
+    handleSelectSite(site.id);
     setViewMode('detail');
   };
 
@@ -245,43 +247,10 @@ export default function Home() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Sites List */}
-          <div className="lg:col-span-1">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">Sites</h2>
-              <button
-                onClick={handleOpenAddModal}
-                className="flex items-center space-x-1 px-3 py-1 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Site</span>
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              {sites.map((site) => (
-                <SiteCard
-                  key={site.id}
-                  site={site}
-                  onSelect={handleSelectSite}
-                  onEdit={handleOpenEditModal}
-                  onDelete={handleOpenDeleteModal}
-                />
-              ))}
-            </div>
-
-            {sites.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                <Globe className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                <p>No sites configured yet</p>
-              </div>
-            )}
-          </div>
-
-          {/* Metrics Dashboard */}
-          <div className="lg:col-span-2">
-            {selectedSite && summary ? (
+        <div className="w-full">
+          {/* Metrics Dashboard - Full Width */}
+          {selectedSite && summary ? (
+            <>
               <ComponentErrorBoundary>
                 <SiteDashboard
                   site={selectedSite}
@@ -295,25 +264,32 @@ export default function Home() {
                   onRetryCollection={handleRetryCollection}
                 />
               </ComponentErrorBoundary>
-            ) : selectedSite ? (
-              <div className="bg-white rounded-lg shadow p-8 text-center">
-                <div className="text-gray-500 mb-4">
-                  {collecting ? 'Running performance analysis...' : 'No performance data available'}
+
+              {/* Performance Insights Section */}
+              <div className="mt-6">
+                <ComponentErrorBoundary>
+                  <SiteInsights siteId={selectedSite.id} />
+                </ComponentErrorBoundary>
+              </div>
+            </>
+          ) : selectedSite ? (
+            <div className="bg-white rounded-lg shadow p-8 text-center">
+              <div className="text-gray-500 mb-4">
+                {collecting ? 'Running performance analysis...' : 'No performance data available'}
+              </div>
+              {!collecting && (
+                <div className="text-sm text-gray-400">
+                  Click "Run Test" to analyze this site's performance using real Lighthouse data.
+                  <br />
+                  Note: Performance testing may take 30-60 seconds to complete.
                 </div>
-                {!collecting && (
-                  <div className="text-sm text-gray-400">
-                    Click "Run Test" to analyze this site's performance using real Lighthouse data.
-                    <br />
-                    Note: Performance testing may take 30-60 seconds to complete.
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="bg-white rounded-lg shadow p-8 text-center">
-                <div className="text-gray-500">Select a site to view metrics</div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          ) : (
+            <div className="bg-white rounded-lg shadow p-8 text-center">
+              <div className="text-gray-500">Select a site to view metrics</div>
+            </div>
+          )}
         </div>
       )}
 

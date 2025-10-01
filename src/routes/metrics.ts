@@ -505,46 +505,6 @@ router.get('/comparison', async (req: Request, res: Response) => {
   }
 });
 
-
-// Test endpoint for local Lighthouse
-router.post('/test-lighthouse-local', async (req: Request, res: Response) => {
-  try {
-    const { url = 'https://www.example.com', deviceType = 'mobile' } = req.body;
-
-    logger.info(`🧪 Testing local Lighthouse collection for ${url} (${deviceType})`);
-
-    // Call the local Lighthouse directly
-    const result = await performanceCollector.collectMetricsLocally(url, { deviceType });
-
-    // Return the result with all debugging information
-    res.json({
-      success: result.success,
-      url,
-      deviceType,
-      timestamp: new Date().toISOString(),
-      metrics: {
-        lcp: result.lcp,
-        fid: result.fid,
-        cls: result.cls,
-        inp: result.inp,
-        fcp: result.fcp,
-        ttfb: result.ttfb,
-        speedIndex: result.speedIndex,
-        performanceScore: result.performance
-      },
-      error: result.error,
-      lighthouseData: result
-    });
-
-  } catch (error) {
-    logger.error('Error testing local Lighthouse:', { error, url: req.body.url });
-    res.status(500).json({
-      error: 'Failed to test local Lighthouse',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
 // Get current job status for all sites
 router.get('/job-status', async (req: Request, res: Response) => {
   try {
