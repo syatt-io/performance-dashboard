@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, memo } from 'react';
+import React, { useState, memo, useEffect, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Plus, Zap, Globe, LayoutDashboard, BarChart3 } from 'lucide-react';
 import { usePerformanceDashboard } from './hooks/usePerformanceDashboard';
 import { useApp } from './context/AppContext';
@@ -12,6 +13,9 @@ import SiteComparison from './components/SiteComparison';
 import SiteModal from './components/modals/SiteModal';
 import DeleteConfirmModal from './components/modals/DeleteConfirmModal';
 import { ComponentErrorBoundary } from './components/ErrorBoundary';
+
+// Disable static generation for this page due to dynamic URL parameters
+export const dynamic = 'force-dynamic';
 
 const PerformanceTargetsLegend = memo(function PerformanceTargetsLegend() {
   return (
@@ -60,7 +64,9 @@ const PerformanceTargetsLegend = memo(function PerformanceTargetsLegend() {
   );
 });
 
-export default function Home() {
+function HomeContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const { setViewMode, setShowComparison } = useApp();
   const {
     sites,
@@ -93,6 +99,34 @@ export default function Home() {
     url: '',
     shopifyDomain: ''
   });
+
+  // Restore state from URL on mount
+  useEffect(() => {
+    if (!sites.length || loading) return;
+
+    const siteId = searchParams.get('site');
+    if (siteId) {
+      const site = sites.find(s => s.id === siteId);
+      if (site && (!selectedSite || selectedSite.id !== siteId)) {
+        handleSelectSite(site);
+        setViewMode('detail');
+      }
+    }
+  }, [sites, loading, searchParams]);
+
+  // Update URL when site selection or view mode changes
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+
+    if (viewMode === 'detail' && selectedSite) {
+      params.set('site', selectedSite.id);
+    } else {
+      params.delete('site');
+    }
+
+    const newUrl = params.toString() ? `?${params.toString()}` : '/';
+    router.replace(newUrl, { scroll: false });
+  }, [selectedSite, viewMode]);
 
   // Modal handlers
   const handleOpenAddModal = () => {
@@ -333,5 +367,13 @@ export default function Home() {
         />
       )}
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="text-lg text-gray-600">Loading...</div></div>}>
+      <HomeContent />
+    </Suspense>
   );
 }
