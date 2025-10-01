@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, CheckCircle, Info, AlertCircle, X, ThumbsDown } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Info, AlertCircle, X, ThumbsDown, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface Recommendation {
   id: string;
