@@ -22,7 +22,7 @@ export interface LighthouseMetrics {
 export async function runLighthouseTest(
   url: string,
   deviceType: 'mobile' | 'desktop'
-): Promise<LighthouseMetrics> {
+): Promise<LighthouseMetrics & { auditDetails?: any }> {
   console.log(`[Worker] Running PageSpeed Insights API test for ${url} (${deviceType})`);
 
   // Use the PageSpeed Insights API from lighthouse.ts
@@ -49,6 +49,7 @@ export async function runLighthouseTest(
     pageLoadTime: result.speedIndex || 0, // Use speed index as approximate page load time
     pageSize: result.themeAssetSize || 0,
     requests: 0, // Not available from PageSpeed API
+    auditDetails: result.auditDetails, // Include curated audit details
   };
 }
 
@@ -80,13 +81,14 @@ export async function collectAndSaveMetrics(
     // Run PageSpeed Insights API test (NOT local Lighthouse)
     const metrics = await runLighthouseTest(site.url, deviceType);
 
-    // Save metrics to database
+    // Save metrics to database (including curated audit details)
     const savedMetric = await prisma.performanceMetric.create({
       data: {
         siteId,
         deviceType,
         timestamp: new Date(),
-        ...metrics
+        ...metrics,
+        auditDetails: metrics.auditDetails || null
       }
     });
 

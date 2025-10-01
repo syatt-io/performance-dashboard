@@ -63,6 +63,9 @@ model PerformanceMetric {
   themeAssetSize          Float? // Total theme asset size in bytes
   thirdPartyBlockingTime  Float? // Third-party blocking time in milliseconds
 
+  // Detailed audit data for resource-level analysis
+  auditDetails  Json? // Lighthouse audit details with specific file/resource information
+
   errorDetails  String?
 
   site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)

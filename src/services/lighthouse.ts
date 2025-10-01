@@ -22,6 +22,8 @@ export interface LighthouseResult {
   imageOptimizationScore?: number;
   themeAssetSize?: number;
   thirdPartyBlockingTime?: number;
+  // Resource-level audit details (curated, top 10 each)
+  auditDetails?: any;
   // WebPageTest-specific fields
   loadTime?: number;
   fullyLoadedTime?: number;
@@ -327,6 +329,10 @@ export class PerformanceCollector {
       logger.info(`📦 Theme assets: ${Math.round(themeAssets.totalByteWeight / 1024)}KB total, ${themeAssets.renderBlockingResources} blocking resources`);
       logger.info(`📊 Raw field data - LCP: ${fieldData?.LARGEST_CONTENTFUL_PAINT_MS?.percentile}ms, CLS: ${fieldData?.CUMULATIVE_LAYOUT_SHIFT_SCORE?.percentile}, FCP: ${fieldData?.FIRST_CONTENTFUL_PAINT_MS?.percentile}ms`);
 
+      // Extract curated resource-level analysis (top 10 of each type only)
+      const curatedAuditDetails = this.extractCuratedAuditDetails(audits);
+      logger.info(`📊 Extracted ${curatedAuditDetails.images.length} images, ${curatedAuditDetails.scripts.length} scripts, ${curatedAuditDetails.stylesheets.length} stylesheets`);
+
       return {
         success: true,
         lcp,
@@ -342,6 +348,8 @@ export class PerformanceCollector {
         imageOptimizationScore,
         themeAssetSize: themeAssets.totalByteWeight,
         thirdPartyBlockingTime: thirdPartyImpact.blockingTime,
+        // Resource-level audit details (curated, top 10 each)
+        auditDetails: curatedAuditDetails,
         lighthouseData: {
           url,
           deviceType: config.deviceType,
@@ -408,7 +416,9 @@ export class PerformanceCollector {
           // Shopify-specific metrics
           imageOptimizationScore: metrics.imageOptimizationScore,
           themeAssetSize: metrics.themeAssetSize,
-          thirdPartyBlockingTime: metrics.thirdPartyBlockingTime
+          thirdPartyBlockingTime: metrics.thirdPartyBlockingTime,
+          // Resource-level audit details (curated, top 10 each)
+          auditDetails: (metrics as any).auditDetails || null
           // Note: visualProgress, testProvider, testId, lighthouseData are not in schema
         }
       });
@@ -626,6 +636,187 @@ export class PerformanceCollector {
     }
 
     logger.info(`✅ Performance collection completed for all sites`);
+  }
+
+  /**
+   * Extract curated resource-level audit details from Lighthouse
+   * Only keeps top 10 of each resource type to prevent database bloat
+   * Expected size: ~10-20KB vs 500KB+ for full audit data
+   */
+  private extractCuratedAuditDetails(audits: any): any {
+    interface ResourceItem {
+      url: string;
+      totalBytes?: number;
+      wastedBytes?: number;
+      wastedMs?: number;
+      resourceType?: string;
+      mimeType?: string;
+      transferSize?: number;
+    }
+
+    const curated: any = {
+      images: [],
+      scripts: [],
+      stylesheets: [],
+      fonts: [],
+      thirdParty: [],
+      timestamp: new Date().toISOString()
+    };
+
+    try {
+      // 1. Image optimization opportunities (top 10 by potential savings)
+      const unoptimizedImages = audits['uses-optimized-images']?.details?.items || [];
+      const webpOpportunities = audits['uses-webp-images']?.details?.items || [];
+      const responsiveImages = audits['uses-responsive-images']?.details?.items || [];
+      const offscreenImages = audits['offscreen-images']?.details?.items || [];
+
+      // Merge all image opportunities by URL
+      const imageMap = new Map<string, any>();
+
+      [...unoptimizedImages, ...webpOpportunities, ...responsiveImages, ...offscreenImages].forEach((item: ResourceItem) => {
+        if (!item.url) return;
+
+        const existing = imageMap.get(item.url) || {
+          url: item.url,
+          totalBytes: item.totalBytes || 0,
+          potentialSavings: 0,
+          issues: []
+        };
+
+        if (item.wastedBytes) {
+          existing.potentialSavings += item.wastedBytes;
+        }
+
+        // Track which optimizations apply
+        if (unoptimizedImages.includes(item)) existing.issues.push('compression');
+        if (webpOpportunities.includes(item)) existing.issues.push('format');
+        if (responsiveImages.includes(item)) existing.issues.push('sizing');
+        if (offscreenImages.includes(item)) existing.issues.push('lazy-load');
+
+        imageMap.set(item.url, existing);
+      });
+
+      // Sort by potential savings and keep top 10
+      curated.images = Array.from(imageMap.values())
+        .sort((a, b) => b.potentialSavings - a.potentialSavings)
+        .slice(0, 10)
+        .map(img => ({
+          url: img.url.substring(0, 200), // Truncate long URLs
+          currentSize: Math.round(img.totalBytes / 1024), // KB
+          potentialSavings: Math.round(img.potentialSavings / 1024), // KB
+          issues: [...new Set(img.issues)] // Dedupe
+        }));
+
+      // 2. JavaScript optimization opportunities (top 10 by wasted bytes)
+      const unusedJs = audits['unused-javascript']?.details?.items || [];
+      const duplicateJs = audits['duplicated-javascript']?.details?.items || [];
+      const legacyJs = audits['legacy-javascript']?.details?.items || [];
+
+      const jsMap = new Map<string, any>();
+
+      [...unusedJs, ...duplicateJs, ...legacyJs].forEach((item: ResourceItem) => {
+        if (!item.url) return;
+
+        const existing = jsMap.get(item.url) || {
+          url: item.url,
+          totalBytes: item.totalBytes || 0,
+          wastedBytes: 0,
+          wastedMs: 0,
+          issues: []
+        };
+
+        if (item.wastedBytes) existing.wastedBytes += item.wastedBytes;
+        if (item.wastedMs) existing.wastedMs += item.wastedMs;
+
+        if (unusedJs.includes(item)) existing.issues.push('unused-code');
+        if (duplicateJs.includes(item)) existing.issues.push('duplicated');
+        if (legacyJs.includes(item)) existing.issues.push('legacy-polyfills');
+
+        jsMap.set(item.url, existing);
+      });
+
+      curated.scripts = Array.from(jsMap.values())
+        .sort((a, b) => b.wastedBytes - a.wastedBytes)
+        .slice(0, 10)
+        .map(js => ({
+          url: js.url.substring(0, 200),
+          totalSize: Math.round(js.totalBytes / 1024), // KB
+          wastedBytes: Math.round(js.wastedBytes / 1024), // KB
+          wastedMs: Math.round(js.wastedMs),
+          issues: [...new Set(js.issues)]
+        }));
+
+      // 3. CSS optimization opportunities (top 10)
+      const unusedCss = audits['unused-css-rules']?.details?.items || [];
+
+      curated.stylesheets = unusedCss
+        .sort((a: ResourceItem, b: ResourceItem) => (b.wastedBytes || 0) - (a.wastedBytes || 0))
+        .slice(0, 10)
+        .map((css: ResourceItem) => ({
+          url: css.url?.substring(0, 200) || '',
+          totalSize: Math.round((css.totalBytes || 0) / 1024), // KB
+          wastedBytes: Math.round((css.wastedBytes || 0) / 1024), // KB
+          issues: ['unused-rules']
+        }));
+
+      // 4. Font optimization opportunities (top 10)
+      const fontDisplay = audits['font-display']?.details?.items || [];
+      const preloadFonts = audits['preload-fonts']?.details?.items || [];
+
+      const fontMap = new Map<string, any>();
+
+      [...fontDisplay, ...preloadFonts].forEach((item: ResourceItem) => {
+        if (!item.url) return;
+
+        const existing = fontMap.get(item.url) || {
+          url: item.url,
+          wastedMs: item.wastedMs || 0,
+          issues: []
+        };
+
+        if (fontDisplay.includes(item)) existing.issues.push('font-display');
+        if (preloadFonts.includes(item)) existing.issues.push('preload');
+
+        fontMap.set(item.url, existing);
+      });
+
+      curated.fonts = Array.from(fontMap.values())
+        .slice(0, 10)
+        .map(font => ({
+          url: font.url.substring(0, 200),
+          wastedMs: Math.round(font.wastedMs),
+          issues: [...new Set(font.issues)]
+        }));
+
+      // 5. Third-party script impact (top 10 by blocking time)
+      const thirdParty = audits['third-party-summary']?.details?.items || [];
+
+      curated.thirdParty = thirdParty
+        .sort((a: any, b: any) => (b.blockingTime || 0) - (a.blockingTime || 0))
+        .slice(0, 10)
+        .map((tp: any) => ({
+          entity: tp.entity?.text || tp.entity || 'Unknown',
+          transferSize: Math.round((tp.transferSize || 0) / 1024), // KB
+          blockingTime: Math.round(tp.blockingTime || 0), // ms
+          mainThreadTime: Math.round(tp.mainThreadTime || 0) // ms
+        }));
+
+      // Log summary
+      const totalSize =
+        JSON.stringify(curated.images).length +
+        JSON.stringify(curated.scripts).length +
+        JSON.stringify(curated.stylesheets).length +
+        JSON.stringify(curated.fonts).length +
+        JSON.stringify(curated.thirdParty).length;
+
+      logger.info(`📊 Curated audit details size: ~${Math.round(totalSize / 1024)}KB`);
+
+    } catch (error) {
+      logger.error('❌ Error extracting curated audit details:', error);
+      // Return empty structure on error
+    }
+
+    return curated;
   }
 }
 
