@@ -173,7 +173,7 @@ export default function ThirdPartyScripts({ siteId }: ThirdPartyScriptsProps) {
       </div>
 
       {/* Category Breakdown */}
-      {Object.keys(summary.byCategory).length > 0 && (
+      {summary?.byCategory && Object.keys(summary.byCategory).length > 0 && (
         <div className="mb-6">
           <h3 className="text-sm font-semibold text-gray-700 mb-3">By Category</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
