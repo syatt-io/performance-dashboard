@@ -70,9 +70,11 @@ export default function ThirdPartyScripts({ siteId }: ThirdPartyScriptsProps) {
         ]);
 
         setSummary(summaryData);
-        setScripts(scriptsData);
+        setScripts(Array.isArray(scriptsData) ? scriptsData : []);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load third-party scripts');
+        setScripts([]);
+        setSummary(null);
       } finally {
         setLoading(false);
       }
@@ -105,7 +107,7 @@ export default function ThirdPartyScripts({ siteId }: ThirdPartyScriptsProps) {
     );
   }
 
-  if (!summary || scripts.length === 0) {
+  if (!summary || !Array.isArray(scripts) || scripts.length === 0) {
     return (
       <div className="bg-white p-6 rounded-lg shadow">
         <div className="flex items-center space-x-2 mb-4">
@@ -232,7 +234,7 @@ export default function ThirdPartyScripts({ siteId }: ThirdPartyScriptsProps) {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {scripts.map((script) => (
+              {Array.isArray(scripts) && scripts.map((script) => (
                 <tr key={script.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center">
