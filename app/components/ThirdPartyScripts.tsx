@@ -155,22 +155,24 @@ export default function ThirdPartyScripts({ siteId }: ThirdPartyScriptsProps) {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-          <div className="text-sm text-blue-700 font-medium">Total Scripts</div>
-          <div className="text-2xl font-bold text-blue-900 mt-1">{summary.totalScripts}</div>
+      {summary && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <div className="text-sm text-blue-700 font-medium">Total Scripts</div>
+            <div className="text-2xl font-bold text-blue-900 mt-1">{summary.totalScripts ?? 0}</div>
+          </div>
+          <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+            <div className="text-sm text-purple-700 font-medium">Total Transfer Size</div>
+            <div className="text-2xl font-bold text-purple-900 mt-1">{formatBytes(summary.totalTransferSize ?? 0)}</div>
+            <div className="text-xs text-purple-600 mt-1">Avg: {formatBytes(summary.avgTransferSize ?? 0)}</div>
+          </div>
+          <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+            <div className="text-sm text-orange-700 font-medium">Total Blocking Time</div>
+            <div className="text-2xl font-bold text-orange-900 mt-1">{formatTime(summary.totalBlockingTime ?? 0)}</div>
+            <div className="text-xs text-orange-600 mt-1">Avg: {formatTime(summary.avgBlockingTime ?? 0)}</div>
+          </div>
         </div>
-        <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-          <div className="text-sm text-purple-700 font-medium">Total Transfer Size</div>
-          <div className="text-2xl font-bold text-purple-900 mt-1">{formatBytes(summary.totalTransferSize)}</div>
-          <div className="text-xs text-purple-600 mt-1">Avg: {formatBytes(summary.avgTransferSize)}</div>
-        </div>
-        <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
-          <div className="text-sm text-orange-700 font-medium">Total Blocking Time</div>
-          <div className="text-2xl font-bold text-orange-900 mt-1">{formatTime(summary.totalBlockingTime)}</div>
-          <div className="text-xs text-orange-600 mt-1">Avg: {formatTime(summary.avgBlockingTime)}</div>
-        </div>
-      </div>
+      )}
 
       {/* Category Breakdown */}
       {summary?.byCategory && Object.keys(summary.byCategory).length > 0 && (
