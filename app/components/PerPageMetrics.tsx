@@ -92,6 +92,41 @@ export default function PerPageMetrics({ metrics }: PerPageMetricsProps) {
     return 'text-red-600';
   };
 
+  const getLCPColor = (lcp: number | null) => {
+    if (lcp === null) return 'text-gray-400';
+    if (lcp <= 2.5) return 'text-green-600';
+    if (lcp <= 4.0) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
+  const getCLSColor = (cls: number | null) => {
+    if (cls === null) return 'text-gray-400';
+    if (cls <= 0.1) return 'text-green-600';
+    if (cls <= 0.25) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
+  const getTBTColor = (tbt: number | null) => {
+    if (tbt === null) return 'text-gray-400';
+    if (tbt <= 200) return 'text-green-600';
+    if (tbt <= 600) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
+  const getFCPColor = (fcp: number | null) => {
+    if (fcp === null) return 'text-gray-400';
+    if (fcp <= 1.8) return 'text-green-600';
+    if (fcp <= 3.0) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
+  const getSIColor = (si: number | null) => {
+    if (si === null) return 'text-gray-400';
+    if (si <= 3.4) return 'text-green-600';
+    if (si <= 5.8) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
   const formatValue = (value: number | null, unit: string = '', decimals: number = 2): string => {
     if (value === null) return 'N/A';
     return `${value.toFixed(decimals)}${unit}`;
@@ -137,31 +172,31 @@ export default function PerPageMetrics({ metrics }: PerPageMetricsProps) {
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">LCP:</span>
-                      <span className="text-sm font-medium text-gray-900">
+                      <span className={`text-sm font-semibold ${getLCPColor(page.mobile.lcp)}`}>
                         {formatValue(page.mobile.lcp, 's')}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">CLS:</span>
-                      <span className="text-sm font-medium text-gray-900">
+                      <span className={`text-sm font-semibold ${getCLSColor(page.mobile.cls)}`}>
                         {formatValue(page.mobile.cls, '', 3)}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">TBT:</span>
-                      <span className="text-sm font-medium text-gray-900">
+                      <span className={`text-sm font-semibold ${getTBTColor(page.mobile.tbt)}`}>
                         {formatValue(page.mobile.tbt, 'ms', 0)}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">FCP:</span>
-                      <span className="text-sm font-medium text-gray-900">
+                      <span className={`text-sm font-semibold ${getFCPColor(page.mobile.fcp)}`}>
                         {formatValue(page.mobile.fcp, 's')}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">Speed Index:</span>
-                      <span className="text-sm font-medium text-gray-900">
+                      <span className={`text-sm font-semibold ${getSIColor(page.mobile.speedIndex)}`}>
                         {formatValue(page.mobile.speedIndex, 's')}
                       </span>
                     </div>
@@ -192,31 +227,31 @@ export default function PerPageMetrics({ metrics }: PerPageMetricsProps) {
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">LCP:</span>
-                      <span className="text-sm font-medium text-gray-900">
+                      <span className={`text-sm font-semibold ${getLCPColor(page.desktop.lcp)}`}>
                         {formatValue(page.desktop.lcp, 's')}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">CLS:</span>
-                      <span className="text-sm font-medium text-gray-900">
+                      <span className={`text-sm font-semibold ${getCLSColor(page.desktop.cls)}`}>
                         {formatValue(page.desktop.cls, '', 3)}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">TBT:</span>
-                      <span className="text-sm font-medium text-gray-900">
+                      <span className={`text-sm font-semibold ${getTBTColor(page.desktop.tbt)}`}>
                         {formatValue(page.desktop.tbt, 'ms', 0)}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">FCP:</span>
-                      <span className="text-sm font-medium text-gray-900">
+                      <span className={`text-sm font-semibold ${getFCPColor(page.desktop.fcp)}`}>
                         {formatValue(page.desktop.fcp, 's')}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">Speed Index:</span>
-                      <span className="text-sm font-medium text-gray-900">
+                      <span className={`text-sm font-semibold ${getSIColor(page.desktop.speedIndex)}`}>
                         {formatValue(page.desktop.speedIndex, 's')}
                       </span>
                     </div>
