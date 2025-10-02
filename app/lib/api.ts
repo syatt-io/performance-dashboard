@@ -377,7 +377,8 @@ export const api = {
 
     const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to fetch third-party scripts');
-    return res.json();
+    const json = await res.json();
+    return json.data || json;
   },
 
   async getThirdPartyScriptSummary(siteId: string, options?: {
@@ -395,6 +396,7 @@ export const api = {
 
     const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to fetch third-party script summary');
-    return res.json();
+    const json = await res.json();
+    return json.data || json;
   },
 };
