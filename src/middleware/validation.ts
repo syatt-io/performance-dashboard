@@ -4,7 +4,7 @@ import { Request, Response, NextFunction } from 'express';
  * Basic input validation middleware
  */
 export const validateSiteCreation = (req: Request, res: Response, next: NextFunction) => {
-  const { name, url, shopifyDomain, apiKey, accessToken } = req.body;
+  const { name, url, shopifyDomain, apiKey, accessToken, categoryUrl, productUrl } = req.body;
 
   // Required fields
   if (!name || typeof name !== 'string' || name.trim().length === 0) {
@@ -38,6 +38,31 @@ export const validateSiteCreation = (req: Request, res: Response, next: NextFunc
     return res.status(400).json({ error: 'Access token must be a string with max 10000 characters' });
   }
 
+  // Validate categoryUrl and productUrl
+  if (categoryUrl && typeof categoryUrl === 'string' && categoryUrl.trim().length > 0) {
+    try {
+      const categoryUrlObj = new URL(categoryUrl);
+      if (!['http:', 'https:'].includes(categoryUrlObj.protocol)) {
+        return res.status(400).json({ error: 'Category URL must use HTTP or HTTPS protocol' });
+      }
+      req.body.categoryUrl = categoryUrl.trim();
+    } catch {
+      return res.status(400).json({ error: 'Invalid category URL format' });
+    }
+  }
+
+  if (productUrl && typeof productUrl === 'string' && productUrl.trim().length > 0) {
+    try {
+      const productUrlObj = new URL(productUrl);
+      if (!['http:', 'https:'].includes(productUrlObj.protocol)) {
+        return res.status(400).json({ error: 'Product URL must use HTTP or HTTPS protocol' });
+      }
+      req.body.productUrl = productUrl.trim();
+    } catch {
+      return res.status(400).json({ error: 'Invalid product URL format' });
+    }
+  }
+
   // Sanitize inputs
   req.body.name = name.trim();
   req.body.url = url.trim();
@@ -50,7 +75,7 @@ export const validateSiteCreation = (req: Request, res: Response, next: NextFunc
  * Validate site updates
  */
 export const validateSiteUpdate = (req: Request, res: Response, next: NextFunction) => {
-  const { name, url, shopifyDomain, isActive } = req.body;
+  const { name, url, shopifyDomain, isActive, categoryUrl, productUrl } = req.body;
 
   // All fields are optional for updates, but validate if provided
   if (name !== undefined) {
@@ -86,6 +111,42 @@ export const validateSiteUpdate = (req: Request, res: Response, next: NextFuncti
 
   if (isActive !== undefined && typeof isActive !== 'boolean') {
     return res.status(400).json({ error: 'isActive must be a boolean' });
+  }
+
+  // Validate categoryUrl
+  if (categoryUrl !== undefined) {
+    if (categoryUrl && typeof categoryUrl === 'string' && categoryUrl.trim().length > 0) {
+      try {
+        const categoryUrlObj = new URL(categoryUrl);
+        if (!['http:', 'https:'].includes(categoryUrlObj.protocol)) {
+          return res.status(400).json({ error: 'Category URL must use HTTP or HTTPS protocol' });
+        }
+        req.body.categoryUrl = categoryUrl.trim();
+      } catch {
+        return res.status(400).json({ error: 'Invalid category URL format' });
+      }
+    } else if (categoryUrl === null || categoryUrl === '') {
+      // Allow clearing the categoryUrl
+      req.body.categoryUrl = null;
+    }
+  }
+
+  // Validate productUrl
+  if (productUrl !== undefined) {
+    if (productUrl && typeof productUrl === 'string' && productUrl.trim().length > 0) {
+      try {
+        const productUrlObj = new URL(productUrl);
+        if (!['http:', 'https:'].includes(productUrlObj.protocol)) {
+          return res.status(400).json({ error: 'Product URL must use HTTP or HTTPS protocol' });
+        }
+        req.body.productUrl = productUrl.trim();
+      } catch {
+        return res.status(400).json({ error: 'Invalid product URL format' });
+      }
+    } else if (productUrl === null || productUrl === '') {
+      // Allow clearing the productUrl
+      req.body.productUrl = null;
+    }
   }
 
   next();

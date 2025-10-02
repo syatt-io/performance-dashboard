@@ -124,6 +124,59 @@ describe('Sites API Routes', () => {
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('Site with this URL already exists');
     });
+
+    it('should create a site with categoryUrl and productUrl', async () => {
+      const newSite = {
+        name: 'Shopify Store',
+        url: 'https://mystore.myshopify.com',
+        categoryUrl: 'https://mystore.myshopify.com/collections/all',
+        productUrl: 'https://mystore.myshopify.com/products/example'
+      };
+
+      const mockCreatedSite = {
+        id: '789',
+        ...newSite,
+        monitoringEnabled: true,
+        checkFrequency: 360,
+        createdAt: new Date(),
+      };
+
+      (prisma.site.create as jest.Mock).mockResolvedValue(mockCreatedSite);
+
+      const response = await request(app)
+        .post('/api/sites')
+        .send(newSite);
+
+      expect(response.status).toBe(201);
+      expect(response.body.categoryUrl).toBe('https://mystore.myshopify.com/collections/all');
+      expect(response.body.productUrl).toBe('https://mystore.myshopify.com/products/example');
+    });
+
+    it('should reject invalid categoryUrl format', async () => {
+      const response = await request(app)
+        .post('/api/sites')
+        .send({
+          name: 'Test',
+          url: 'https://test.com',
+          categoryUrl: 'not-a-valid-url'
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Invalid category URL format');
+    });
+
+    it('should reject invalid productUrl format', async () => {
+      const response = await request(app)
+        .post('/api/sites')
+        .send({
+          name: 'Test',
+          url: 'https://test.com',
+          productUrl: 'invalid-url'
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Invalid product URL format');
+    });
   });
 
   describe('GET /api/sites/:id', () => {
@@ -187,6 +240,66 @@ describe('Sites API Routes', () => {
 
       expect(response.status).toBe(404);
       expect(response.body.error).toBe('Site not found');
+    });
+
+    it('should update categoryUrl and productUrl', async () => {
+      const updatedSite = {
+        id: VALID_UUID,
+        name: 'Test Site',
+        url: 'https://test.com',
+        categoryUrl: 'https://test.com/collections/new',
+        productUrl: 'https://test.com/products/new-product',
+      };
+
+      (prisma.site.update as jest.Mock).mockResolvedValue(updatedSite);
+
+      const response = await request(app)
+        .put(`/api/sites/${VALID_UUID}`)
+        .send({
+          categoryUrl: 'https://test.com/collections/new',
+          productUrl: 'https://test.com/products/new-product'
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.categoryUrl).toBe('https://test.com/collections/new');
+      expect(response.body.productUrl).toBe('https://test.com/products/new-product');
+    });
+
+    it('should clear categoryUrl when set to null', async () => {
+      const updatedSite = {
+        id: VALID_UUID,
+        name: 'Test Site',
+        url: 'https://test.com',
+        categoryUrl: null,
+        productUrl: 'https://test.com/products/example',
+      };
+
+      (prisma.site.update as jest.Mock).mockResolvedValue(updatedSite);
+
+      const response = await request(app)
+        .put(`/api/sites/${VALID_UUID}`)
+        .send({ categoryUrl: null });
+
+      expect(response.status).toBe(200);
+      expect(response.body.categoryUrl).toBeNull();
+    });
+
+    it('should reject invalid categoryUrl during update', async () => {
+      const response = await request(app)
+        .put(`/api/sites/${VALID_UUID}`)
+        .send({ categoryUrl: 'invalid-url' });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Invalid category URL format');
+    });
+
+    it('should reject invalid productUrl during update', async () => {
+      const response = await request(app)
+        .put(`/api/sites/${VALID_UUID}`)
+        .send({ productUrl: 'not-valid' });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Invalid product URL format');
     });
   });
 

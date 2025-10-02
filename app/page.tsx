@@ -168,19 +168,19 @@ function HomeContent() {
     setShowDeleteModal(true);
   };
 
-  const handleSubmitAdd = async (data: typeof siteFormData) => {
+  const handleSubmitAdd = async (data: { name: string; url: string; shopifyDomain: string; categoryUrl?: string; productUrl?: string }) => {
     try {
-      await handleAddSite(data);
+      await handleAddSite(data as typeof siteFormData);
       setShowAddSiteModal(false);
     } catch (error) {
       console.error('Failed to add site:', error);
     }
   };
 
-  const handleSubmitEdit = async (data: typeof siteFormData) => {
+  const handleSubmitEdit = async (data: { name: string; url: string; shopifyDomain: string; categoryUrl?: string; productUrl?: string }) => {
     if (!editingSite) return;
     try {
-      await handleUpdateSite(editingSite.id, data);
+      await handleUpdateSite(editingSite.id, data as typeof siteFormData);
       setShowEditSiteModal(false);
       setEditingSite(null);
     } catch (error) {

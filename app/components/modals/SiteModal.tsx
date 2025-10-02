@@ -6,7 +6,7 @@ import { Site } from '../../lib/api';
 interface SiteModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (siteData: { name: string; url: string; shopifyDomain: string; categoryUrl?: string; productUrl?: string }) => void;
+  onSubmit: (siteData: { name: string; url: string; shopifyDomain: string; categoryUrl?: string; productUrl?: string }) => void | Promise<void>;
   title: string;
   submitText: string;
   site?: Site | null;

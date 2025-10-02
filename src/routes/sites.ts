@@ -35,7 +35,7 @@ router.get('/', async (req: Request, res: Response) => {
 
 router.post('/', validateSiteCreation, async (req: Request, res: Response) => {
   try {
-    const { name, url, monitoringEnabled = true, checkFrequency = 360 } = req.body;
+    const { name, url, monitoringEnabled = true, checkFrequency = 360, categoryUrl, productUrl } = req.body;
 
     if (!name || !url) {
       return res.status(400).json({ error: 'Name and URL are required' });
@@ -53,7 +53,9 @@ router.post('/', validateSiteCreation, async (req: Request, res: Response) => {
         name,
         url,
         monitoringEnabled,
-        checkFrequency
+        checkFrequency,
+        ...(categoryUrl && { categoryUrl }),
+        ...(productUrl && { productUrl })
       }
     });
 
@@ -100,7 +102,7 @@ router.get('/:id', validateUuidParam('id'), async (req: Request, res: Response) 
 router.put('/:id', validateUuidParam('id'), validateSiteUpdate, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, url, monitoringEnabled, checkFrequency, isShopify } = req.body;
+    const { name, url, monitoringEnabled, checkFrequency, isShopify, categoryUrl, productUrl } = req.body;
 
     const site = await prisma.site.update({
       where: { id },
@@ -110,6 +112,8 @@ router.put('/:id', validateUuidParam('id'), validateSiteUpdate, async (req: Requ
         ...(monitoringEnabled !== undefined && { monitoringEnabled }),
         ...(checkFrequency !== undefined && { checkFrequency }),
         ...(isShopify !== undefined && { isShopify }),
+        ...(categoryUrl !== undefined && { categoryUrl }),
+        ...(productUrl !== undefined && { productUrl })
       }
     });
 
