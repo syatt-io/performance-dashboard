@@ -84,15 +84,14 @@ export function getTestConfiguration(site: {
     { type: 'homepage', url: site.url }
   ];
 
-  // Add category page if available
-  if (site.categoryUrl) {
-    pageTypes.push({ type: 'category', url: site.categoryUrl });
-  }
+  // Always add category page - use /collections/all as default for Shopify sites
+  const categoryUrl = site.categoryUrl || `${site.url.replace(/\/$/, '')}/collections/all`;
+  pageTypes.push({ type: 'category', url: categoryUrl });
 
-  // Add product page if available
-  if (site.productUrl) {
-    pageTypes.push({ type: 'product', url: site.productUrl });
-  }
+  // Always add product page - will be auto-discovered if not provided
+  // The productUrl will be discovered in the worker if null
+  const productUrl = site.productUrl || null;
+  pageTypes.push({ type: 'product', url: productUrl || site.url }); // Temporary placeholder
 
   return {
     pageTypes,

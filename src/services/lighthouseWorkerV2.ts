@@ -7,6 +7,7 @@ import {
   calculateMedianMetrics,
   groupTestRuns
 } from '../utils/medianCalculator';
+import { discoverProductUrl } from '../utils/productDiscovery';
 
 export interface LighthouseMetrics {
   performance: number;
@@ -120,6 +121,25 @@ export async function collectComprehensiveMetrics(
 
     console.log(`[Worker] Testing site: ${site.name}`);
     const config = getTestConfiguration(site);
+
+    // Auto-discover product URL if not provided
+    if (!site.productUrl) {
+      console.log(`[Worker] No product URL provided, attempting auto-discovery...`);
+      const discoveredProductUrl = await discoverProductUrl(site.url);
+
+      if (discoveredProductUrl) {
+        // Update the config with discovered URL
+        const productPageIndex = config.pageTypes.findIndex(p => p.type === 'product');
+        if (productPageIndex >= 0) {
+          config.pageTypes[productPageIndex].url = discoveredProductUrl;
+          console.log(`[Worker] Auto-discovered product URL: ${discoveredProductUrl}`);
+        }
+      } else {
+        // Remove product page from config if discovery failed
+        console.log(`[Worker] Product URL discovery failed, skipping product page tests`);
+        config.pageTypes = config.pageTypes.filter(p => p.type !== 'product');
+      }
+    }
 
     // Track all test runs for this batch
     const allTestRuns = [];
