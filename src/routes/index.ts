@@ -5,6 +5,7 @@ import metricsRouter from './metrics';
 import monitoringRouter from './monitoring';
 import shopifyRouter from './shopify';
 import insightsRouter from './insights';
+import thirdPartyScriptsRouter from './thirdPartyScripts';
 import { siteOperationsLimiter } from '../middleware/rateLimit';
 
 const router = Router();
@@ -19,5 +20,6 @@ router.use('/metrics', metricsRouter);
 router.use('/monitoring', monitoringRouter);
 router.use('/shopify', shopifyRouter);
 router.use('/insights', insightsRouter);
+router.use('/third-party-scripts', thirdPartyScriptsRouter);
 
 export default router;

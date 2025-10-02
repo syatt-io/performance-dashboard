@@ -1,6 +1,7 @@
 import { logger } from '../utils/logger';
 import { prisma } from './database';
 import { shopifyMetricsCollector } from './shopifyMetrics';
+import { thirdPartyScriptService } from './thirdPartyScripts';
 import { GoogleAuth } from 'google-auth-library';
 
 export interface LighthouseConfig {
@@ -425,6 +426,25 @@ export class PerformanceCollector {
 
       logger.info(`✅ [${config.deviceType.toUpperCase()}] Successfully stored metrics for ${url} - DB ID: ${performanceMetric.id}`);
       logger.info(`📊 [${config.deviceType.toUpperCase()}] Metrics: LCP=${metrics.lcp?.toFixed(2)}s, CLS=${metrics.cls?.toFixed(3)}, Performance=${metrics.performance}/100`);
+
+      // Process and store third-party scripts if audit details are available
+      if ((metrics as any).auditDetails) {
+        logger.info(`🔍 [${config.deviceType.toUpperCase()}] Processing third-party scripts...`);
+        try {
+          await thirdPartyScriptService.processAndStoreScripts(
+            siteId,
+            url,
+            (metrics as any).auditDetails,
+            performanceMetric.id,
+            'homepage',
+            url,
+            config.deviceType
+          );
+          logger.info(`✅ [${config.deviceType.toUpperCase()}] Third-party scripts processed`);
+        } catch (error) {
+          logger.error(`❌ [${config.deviceType.toUpperCase()}] Failed to process third-party scripts:`, error);
+        }
+      }
 
       // Log data source for debugging
       const testProvider = metrics?.testProvider || 'unknown';

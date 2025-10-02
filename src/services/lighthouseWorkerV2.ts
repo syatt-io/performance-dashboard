@@ -1,5 +1,6 @@
 import { prisma } from './database';
 import { performanceCollector } from './lighthouse';
+import { thirdPartyScriptService } from './thirdPartyScripts';
 import { v4 as uuidv4 } from 'uuid';
 import {
   getTestConfiguration,
@@ -22,6 +23,7 @@ export interface LighthouseMetrics {
   pageLoadTime: number;
   pageSize: number;
   requests: number;
+  auditDetails?: any;
 }
 
 /**
@@ -54,6 +56,7 @@ export async function runSingleTest(
     pageLoadTime: result.speedIndex || 0,
     pageSize: result.themeAssetSize || 0,
     requests: 0,
+    auditDetails: (result as any).auditDetails,
   };
 }
 
@@ -178,7 +181,7 @@ export async function collectComprehensiveMetrics(
       if (runs.length > 0) {
         const medianMetrics = calculateMedianMetrics(runs);
 
-        await prisma.performanceMetric.create({
+        const medianMetric = await prisma.performanceMetric.create({
           data: {
             siteId,
             deviceType,
@@ -202,6 +205,27 @@ export async function collectComprehensiveMetrics(
         });
 
         console.log(`[Worker] Saved median metrics for ${site.name} ${pageType} (${deviceType}): Performance ${medianMetrics.performance}`);
+
+        // Process third-party scripts from the first test run's audit details
+        const firstRunWithAudit = runs.find((run: any) => run.auditDetails);
+        if (firstRunWithAudit && (firstRunWithAudit as any).auditDetails) {
+          console.log(`[Worker] Processing third-party scripts for ${site.name} ${pageType} (${deviceType})`);
+          try {
+            const pageUrl = config.pageTypes.find((p: any) => p.type === pageType)?.url || site.url;
+            await thirdPartyScriptService.processAndStoreScripts(
+              siteId,
+              site.url,
+              (firstRunWithAudit as any).auditDetails,
+              medianMetric.id,
+              pageType,
+              pageUrl,
+              deviceType as 'mobile' | 'desktop'
+            );
+            console.log(`[Worker] Third-party scripts processed for ${site.name} ${pageType} (${deviceType})`);
+          } catch (error) {
+            console.error(`[Worker] Failed to process third-party scripts:`, error);
+          }
+        }
       }
     }
 

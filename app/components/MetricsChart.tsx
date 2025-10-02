@@ -8,7 +8,7 @@ import DateRangePicker from './DateRangePicker';
 
 interface MetricsChartProps {
   metrics: PerformanceMetric[];
-  metric: 'lcp' | 'fid' | 'cls' | 'tbt' | 'fcp' | 'speedIndex' | 'performanceScore' | 'imageOptimizationScore' | 'themeAssetSize' | 'thirdPartyBlockingTime';
+  metric: 'lcp' | 'fid' | 'cls' | 'tbt' | 'fcp' | 'speedIndex' | 'performanceScore' | 'imageOptimizationScore' | 'themeAssetSize' | 'thirdPartyBlockingTime' | 'inp';
   title: string;
   unit?: string;
   showTrend?: boolean;

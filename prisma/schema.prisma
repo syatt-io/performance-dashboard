@@ -20,11 +20,12 @@ model Site {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  metrics         PerformanceMetric[]
-  scheduledJobs   ScheduledJob[]
-  testRuns        PerformanceTestRun[]
-  recommendations Recommendation[]
-  anomalies       Anomaly[]
+  metrics                    PerformanceMetric[]
+  scheduledJobs              ScheduledJob[]
+  testRuns                   PerformanceTestRun[]
+  recommendations            Recommendation[]
+  anomalies                  Anomaly[]
+  thirdPartyScriptDetections ThirdPartyScriptDetection[]
 
   @@map("sites")
 }
@@ -195,4 +196,49 @@ model Anomaly {
   @@index([siteId, createdAt(sort: Desc)])
   @@index([metric, status])
   @@map("anomalies")
+}
+
+model ThirdPartyScript {
+  id              String   @id @default(uuid())
+  url             String   @unique // Full URL of the script
+  domain          String   // Domain of the script (for grouping)
+  vendor          String?  // Identified vendor/app name (e.g., "Google Analytics", "Klaviyo")
+  category        String?  // Type: analytics, marketing, chat, support, payments, etc.
+  isBlocking      Boolean  @default(false) @map("is_blocking") // Whether script blocks rendering
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  detections      ThirdPartyScriptDetection[]
+
+  @@index([domain])
+  @@index([vendor])
+  @@index([category])
+  @@map("third_party_scripts")
+}
+
+model ThirdPartyScriptDetection {
+  id              String   @id @default(uuid())
+  siteId          String   @map("site_id")
+  scriptId        String   @map("script_id")
+  metricId        String?  @map("metric_id") // Link to the PerformanceMetric
+  timestamp       DateTime @default(now())
+  pageType        String   @default("homepage") @map("page_type")
+  pageUrl         String   @map("page_url")
+  deviceType      String   @default("mobile") @map("device_type")
+
+  // Performance impact metrics
+  transferSize    Int?     @map("transfer_size") // Bytes transferred over network
+  resourceSize    Int?     @map("resource_size") // Bytes uncompressed
+  startTime       Float?   @map("start_time") // When it started loading (ms from navigation start)
+  duration        Float?   // How long it took to load (ms)
+  blockingTime    Float?   @map("blocking_time") // Main thread blocking time (ms)
+
+  site            Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  script          ThirdPartyScript @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+
+  @@index([siteId, timestamp(sort: Desc)])
+  @@index([scriptId, timestamp(sort: Desc)])
+  @@index([siteId, scriptId, timestamp(sort: Desc)])
+  @@index([pageType])
+  @@map("third_party_script_detections")
 }
