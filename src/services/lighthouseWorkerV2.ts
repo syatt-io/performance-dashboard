@@ -123,6 +123,8 @@ export async function collectComprehensiveMetrics(
 
     // Track all test runs for this batch
     const allTestRuns = [];
+    // Keep track of audit details for third-party script processing
+    const auditDetailsMap = new Map<string, any>();
 
     // Test each page type
     for (const pageConfig of config.pageTypes) {
@@ -167,6 +169,12 @@ export async function collectComprehensiveMetrics(
             }
           });
           allTestRuns.push(testRun);
+
+          // Store audit details for the first run of each page/device combination
+          const key = `${pageConfig.type}_${deviceType}`;
+          if (!auditDetailsMap.has(key) && result.auditDetails) {
+            auditDetailsMap.set(key, result.auditDetails);
+          }
         }
       }
     }
@@ -206,16 +214,17 @@ export async function collectComprehensiveMetrics(
 
         console.log(`[Worker] Saved median metrics for ${site.name} ${pageType} (${deviceType}): Performance ${medianMetrics.performance}`);
 
-        // Process third-party scripts from the first test run's audit details
-        const firstRunWithAudit = runs.find((run: any) => run.auditDetails);
-        if (firstRunWithAudit && (firstRunWithAudit as any).auditDetails) {
+        // Process third-party scripts from the stored audit details
+        const auditDetailsKey = `${pageType}_${deviceType}`;
+        const auditDetails = auditDetailsMap.get(auditDetailsKey);
+        if (auditDetails) {
           console.log(`[Worker] Processing third-party scripts for ${site.name} ${pageType} (${deviceType})`);
           try {
             const pageUrl = config.pageTypes.find((p: any) => p.type === pageType)?.url || site.url;
             await thirdPartyScriptService.processAndStoreScripts(
               siteId,
               site.url,
-              (firstRunWithAudit as any).auditDetails,
+              auditDetails,
               medianMetric.id,
               pageType,
               pageUrl,
@@ -225,6 +234,8 @@ export async function collectComprehensiveMetrics(
           } catch (error) {
             console.error(`[Worker] Failed to process third-party scripts:`, error);
           }
+        } else {
+          console.log(`[Worker] No audit details available for ${site.name} ${pageType} (${deviceType})`);
         }
       }
     }
