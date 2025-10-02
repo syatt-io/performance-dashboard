@@ -69,6 +69,7 @@ router.get('/sites/:siteId', async (req: Request, res: Response) => {
         id: true,
         timestamp: true,
         deviceType: true,
+        pageType: true,
         lcp: true,
         cls: true,
         tbt: true,
