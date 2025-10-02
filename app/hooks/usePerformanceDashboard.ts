@@ -78,15 +78,14 @@ export function usePerformanceDashboard() {
     try {
       const data = await api.getSites();
       setSites(data.sites);
-      if (data.sites.length > 0 && !state.selectedSite) {
-        setSelectedSite(data.sites[0]);
-      }
+      // Don't auto-select first site - let URL restoration or user interaction handle it
+      // This prevents race condition where first site is selected before URL restoration completes
     } catch (error) {
       console.error('Failed to load sites:', error);
     } finally {
       setLoading(false);
     }
-  }, [setSites, setSelectedSite, setLoading, state.selectedSite]);
+  }, [setSites, setLoading]);
 
   const loadSiteData = useCallback(async (siteId: string, range?: typeof state.dateRange) => {
     try {
