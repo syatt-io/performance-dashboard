@@ -84,6 +84,35 @@ export interface MetricsSummary {
   metricsCount: number;
 }
 
+export interface ThirdPartyScript {
+  id: string;
+  url: string;
+  domain: string;
+  vendor: string | null;
+  category: string | null;
+  isBlocking: boolean;
+  detectionCount: number;
+  totalTransferSize: number;
+  avgTransferSize: number;
+  totalBlockingTime: number;
+  avgBlockingTime: number;
+  lastSeen: string;
+}
+
+export interface ThirdPartyScriptSummary {
+  totalScripts: number;
+  totalTransferSize: number;
+  totalBlockingTime: number;
+  avgTransferSize: number;
+  avgBlockingTime: number;
+  byCategory: Record<string, {
+    count: number;
+    transferSize: number;
+    blockingTime: number;
+  }>;
+  scripts: ThirdPartyScript[];
+}
+
 export const api = {
   async getSites(): Promise<{ sites: Site[]; total: number }> {
     const res = await fetch(`${API_BASE}/sites`);
@@ -330,6 +359,42 @@ export const api = {
   }> {
     const res = await fetch(`${API_BASE}/metrics/job-status`);
     if (!res.ok) throw new Error('Failed to fetch job status');
+    return res.json();
+  },
+
+  async getThirdPartyScripts(siteId: string, options?: {
+    pageType?: 'homepage' | 'category' | 'product';
+    deviceType?: 'mobile' | 'desktop';
+    timeRange?: string;
+  }): Promise<ThirdPartyScript[]> {
+    const params = new URLSearchParams();
+    if (options?.pageType) params.set('pageType', options.pageType);
+    if (options?.deviceType) params.set('deviceType', options.deviceType);
+    if (options?.timeRange) params.set('timeRange', options.timeRange);
+
+    const queryString = params.toString();
+    const url = `${API_BASE}/third-party-scripts/sites/${siteId}${queryString ? `?${queryString}` : ''}`;
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Failed to fetch third-party scripts');
+    return res.json();
+  },
+
+  async getThirdPartyScriptSummary(siteId: string, options?: {
+    pageType?: 'homepage' | 'category' | 'product';
+    deviceType?: 'mobile' | 'desktop';
+    timeRange?: string;
+  }): Promise<ThirdPartyScriptSummary> {
+    const params = new URLSearchParams();
+    if (options?.pageType) params.set('pageType', options.pageType);
+    if (options?.deviceType) params.set('deviceType', options.deviceType);
+    if (options?.timeRange) params.set('timeRange', options.timeRange);
+
+    const queryString = params.toString();
+    const url = `${API_BASE}/third-party-scripts/sites/${siteId}/summary${queryString ? `?${queryString}` : ''}`;
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Failed to fetch third-party script summary');
     return res.json();
   },
 };

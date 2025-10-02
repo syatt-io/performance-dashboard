@@ -429,6 +429,279 @@ export const THIRD_PARTY_SIGNATURES: ScriptSignature[] = [
       urlPatterns: [/recaptcha.*\.js/],
     },
   },
+
+  // ===== ADDITIONAL ANALYTICS =====
+  {
+    vendor: 'Amplitude',
+    category: 'analytics',
+    patterns: {
+      domains: ['cdn.amplitude.com'],
+      urlPatterns: [/amplitude.*\.js/],
+    },
+  },
+  {
+    vendor: 'Heap Analytics',
+    category: 'analytics',
+    patterns: {
+      domains: ['cdn.heapanalytics.com'],
+      urlPatterns: [/heap.*\.js/],
+    },
+  },
+  {
+    vendor: 'Pendo',
+    category: 'analytics',
+    patterns: {
+      domains: ['cdn.pendo.io'],
+      urlPatterns: [/pendo.*\.js/],
+    },
+  },
+  {
+    vendor: 'FullStory',
+    category: 'analytics',
+    patterns: {
+      domains: ['fullstory.com'],
+      urlPatterns: [/fullstory.*\.js/, /fs\.js/],
+    },
+  },
+  {
+    vendor: 'LogRocket',
+    category: 'analytics',
+    patterns: {
+      domains: ['cdn.logrocket.io'],
+      urlPatterns: [/logrocket.*\.js/],
+    },
+  },
+  {
+    vendor: 'Sentry',
+    category: 'monitoring',
+    patterns: {
+      domains: ['browser.sentry-cdn.com'],
+      urlPatterns: [/sentry.*\.js/],
+    },
+  },
+
+  // ===== ADDITIONAL PAYMENTS =====
+  {
+    vendor: 'PayPal',
+    category: 'payments',
+    patterns: {
+      domains: ['www.paypal.com', 'www.paypalobjects.com'],
+      urlPatterns: [/paypal.*\.js/],
+    },
+  },
+  {
+    vendor: 'Stripe',
+    category: 'payments',
+    patterns: {
+      domains: ['js.stripe.com'],
+      urlPatterns: [/stripe.*\.js/],
+    },
+  },
+  {
+    vendor: 'Apple Pay',
+    category: 'payments',
+    patterns: {
+      domains: ['applepay.cdn-apple.com'],
+      urlPatterns: [/applepay.*\.js/],
+    },
+  },
+  {
+    vendor: 'Braintree',
+    category: 'payments',
+    patterns: {
+      domains: ['js.braintreegateway.com'],
+      urlPatterns: [/braintree.*\.js/],
+    },
+  },
+  {
+    vendor: 'Square',
+    category: 'payments',
+    patterns: {
+      domains: ['js.squareup.com'],
+      urlPatterns: [/square.*\.js/],
+    },
+  },
+
+  // ===== SMS & SUBSCRIPTION =====
+  {
+    vendor: 'Attentive',
+    category: 'marketing',
+    patterns: {
+      domains: ['cdn.attn.tv'],
+      urlPatterns: [/attentive.*\.js/],
+    },
+  },
+  {
+    vendor: 'Postscript',
+    category: 'marketing',
+    patterns: {
+      domains: ['sdk.postscript.io'],
+      urlPatterns: [/postscript.*\.js/],
+    },
+  },
+
+  // ===== ADDITIONAL A/B TESTING =====
+  {
+    vendor: 'Convert',
+    category: 'optimization',
+    patterns: {
+      domains: ['cdn-3.convertexperiments.com'],
+      urlPatterns: [/convert.*\.js/],
+    },
+    isBlocking: true,
+  },
+  {
+    vendor: 'AB Tasty',
+    category: 'optimization',
+    patterns: {
+      domains: ['try.abtasty.com'],
+      urlPatterns: [/abtasty.*\.js/],
+    },
+    isBlocking: true,
+  },
+  {
+    vendor: 'Kameleoon',
+    category: 'optimization',
+    patterns: {
+      domains: ['cdn.kameleoon.com'],
+      urlPatterns: [/kameleoon.*\.js/],
+    },
+    isBlocking: true,
+  },
+
+  // ===== CDN & PERFORMANCE =====
+  {
+    vendor: 'Cloudflare',
+    category: 'cdn',
+    patterns: {
+      domains: ['cdnjs.cloudflare.com'],
+      urlPatterns: [/cloudflare.*\.js/],
+    },
+  },
+  {
+    vendor: 'Fastly',
+    category: 'cdn',
+    patterns: {
+      domains: ['fastly.net'],
+      urlPatterns: [/fastly.*\.js/],
+    },
+  },
+
+  // ===== VIDEO & MEDIA =====
+  {
+    vendor: 'YouTube',
+    category: 'media',
+    patterns: {
+      domains: ['www.youtube.com'],
+      urlPatterns: [/youtube.*\.js/, /iframe_api/],
+    },
+  },
+  {
+    vendor: 'Vimeo',
+    category: 'media',
+    patterns: {
+      domains: ['player.vimeo.com'],
+      urlPatterns: [/vimeo.*\.js/],
+    },
+  },
+  {
+    vendor: 'Wistia',
+    category: 'media',
+    patterns: {
+      domains: ['fast.wistia.com'],
+      urlPatterns: [/wistia.*\.js/],
+    },
+  },
+
+  // ===== E-COMMERCE SPECIFIC =====
+  {
+    vendor: 'Recharge',
+    category: 'subscriptions',
+    patterns: {
+      domains: ['cdn.rechargeapps.com'],
+      urlPatterns: [/recharge.*\.js/],
+    },
+  },
+  {
+    vendor: 'Bold Commerce',
+    category: 'shopify-app',
+    patterns: {
+      domains: ['cdn.boldapps.net'],
+      urlPatterns: [/bold.*\.js/],
+    },
+  },
+  {
+    vendor: 'Shogun',
+    category: 'page-builder',
+    patterns: {
+      domains: ['lib.getshogun.com'],
+      urlPatterns: [/shogun.*\.js/],
+    },
+  },
+  {
+    vendor: 'Gem Pages',
+    category: 'page-builder',
+    patterns: {
+      domains: ['assets.gempages.net'],
+      urlPatterns: [/gempages.*\.js/],
+    },
+  },
+  {
+    vendor: 'PageFly',
+    category: 'page-builder',
+    patterns: {
+      domains: ['assets.pagefly.io'],
+      urlPatterns: [/pagefly.*\.js/],
+    },
+  },
+  {
+    vendor: 'Gorgias Helpdesk',
+    category: 'helpdesk',
+    patterns: {
+      domains: ['storage.googleapis.com'],
+      urlPatterns: [/gorgias.*\.js/],
+    },
+  },
+  {
+    vendor: 'Tidio Chat',
+    category: 'chat',
+    patterns: {
+      domains: ['code.tidio.co'],
+      urlPatterns: [/tidio.*\.js/],
+    },
+  },
+  {
+    vendor: 'Okendo',
+    category: 'reviews',
+    patterns: {
+      domains: ['cdn-static.okendo.io'],
+      urlPatterns: [/okendo.*\.js/],
+    },
+  },
+  {
+    vendor: 'Bazaarvoice',
+    category: 'reviews',
+    patterns: {
+      domains: ['display.ugc.bazaarvoice.com'],
+      urlPatterns: [/bazaarvoice.*\.js/],
+    },
+  },
+  {
+    vendor: 'Instafeed',
+    category: 'social',
+    patterns: {
+      domains: ['cdn.jsdelivr.net'],
+      urlPatterns: [/instafeed.*\.js/],
+    },
+  },
+  {
+    vendor: 'Tapcart',
+    category: 'mobile-app',
+    patterns: {
+      domains: ['sdk.tapcart.com'],
+      urlPatterns: [/tapcart.*\.js/],
+    },
+  },
 ];
 
 /**

@@ -5,6 +5,7 @@ import { Zap, AlertCircle } from 'lucide-react';
 import { Site, MetricsSummary, PerformanceMetric } from '../lib/api';
 import MetricsChart from './MetricsChart';
 import ShopifyMetrics from './ShopifyMetrics';
+import ThirdPartyScripts from './ThirdPartyScripts';
 
 interface SiteDashboardProps {
   site: Site;
@@ -424,6 +425,9 @@ const SiteDashboard = memo(function SiteDashboard({
 
         {/* Shopify-specific Metrics */}
         <ShopifyMetrics metrics={metrics} />
+
+        {/* Third-Party Scripts */}
+        <ThirdPartyScripts siteId={site.id} />
       </div>
       </>
       )}
