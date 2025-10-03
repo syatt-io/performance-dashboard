@@ -34,11 +34,16 @@
       {
         "name": "next"
       }
-    ]
+    ],
+    "paths": {
+      "@/*": ["./*"]
+    }
   },
   "include": [
     "src/**/*",
-    ".next/types/**/*.ts"
+    "app/**/*",
+    ".next/types/**/*.ts",
+    "middleware.ts"
   ],
   "exclude": [
     "node_modules",

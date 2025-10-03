@@ -6,8 +6,8 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  output: 'export',
-  trailingSlash: true,
+  // Removed 'output: export' to support NextAuth.js middleware and API routes
+  trailingSlash: false, // Changed to false for better compatibility with NextAuth
   images: {
     unoptimized: true
   }
