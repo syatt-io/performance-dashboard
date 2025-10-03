@@ -31,7 +31,18 @@ export async function POST(
 ) {
   const path = params.path.join('/')
   const url = `${BACKEND_URL}/api/${path}${request.nextUrl.search}`
-  const body = await request.json()
+
+  // Only parse body if content-length is present and > 0
+  let body = null
+  const contentLength = request.headers.get('content-length')
+  if (contentLength && parseInt(contentLength) > 0) {
+    try {
+      body = await request.json()
+    } catch (e) {
+      // If body parsing fails, continue with null body
+      console.warn('Failed to parse request body:', e)
+    }
+  }
 
   try {
     const response = await fetch(url, {
@@ -39,7 +50,7 @@ export async function POST(
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(body),
+      body: body ? JSON.stringify(body) : undefined,
     })
 
     const data = await response.json()
@@ -56,7 +67,18 @@ export async function PUT(
 ) {
   const path = params.path.join('/')
   const url = `${BACKEND_URL}/api/${path}${request.nextUrl.search}`
-  const body = await request.json()
+
+  // Only parse body if content-length is present and > 0
+  let body = null
+  const contentLength = request.headers.get('content-length')
+  if (contentLength && parseInt(contentLength) > 0) {
+    try {
+      body = await request.json()
+    } catch (e) {
+      // If body parsing fails, continue with null body
+      console.warn('Failed to parse request body:', e)
+    }
+  }
 
   try {
     const response = await fetch(url, {
@@ -64,7 +86,7 @@ export async function PUT(
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(body),
+      body: body ? JSON.stringify(body) : undefined,
     })
 
     const data = await response.json()
