@@ -115,33 +115,31 @@ export async function scheduleAllSites() {
   const jobs = [];
 
   for (const site of sites) {
-    // Create scheduled jobs in database
-    for (const deviceType of ['mobile', 'desktop'] as const) {
-      logger.info(`[Queue] Creating scheduled job for ${site.name} (${deviceType})`);
+    // Use comprehensive mode: tests all pages, both devices, with 3 runs each
+    logger.info(`[Queue] Creating comprehensive test job for ${site.name}`);
 
-      const scheduledJob = await prisma.scheduledJob.create({
-        data: {
-          siteId: site.id,
-          jobType: 'lighthouse',
-          status: 'pending',
-          scheduledFor: new Date(),
-        }
-      });
-
-      logger.info(`[Queue] Adding job to queue for ${site.name} (${deviceType})`);
-
-      // Add to queue
-      const job = await addPerformanceJob({
+    const scheduledJob = await prisma.scheduledJob.create({
+      data: {
         siteId: site.id,
-        deviceType,
-        scheduledJobId: scheduledJob.id,
-      });
+        jobType: 'lighthouse',
+        status: 'pending',
+        scheduledFor: new Date(),
+      }
+    });
 
-      jobs.push(job);
-    }
+    logger.info(`[Queue] Adding comprehensive job to queue for ${site.name}`);
+
+    // Add to queue with comprehensive flag
+    const job = await addPerformanceJob({
+      siteId: site.id,
+      scheduledJobId: scheduledJob.id,
+      comprehensive: true
+    });
+
+    jobs.push(job);
   }
 
-  logger.info(`[Queue] Successfully scheduled ${jobs.length} jobs`);
+  logger.info(`[Queue] Successfully scheduled ${jobs.length} comprehensive jobs`);
   return jobs;
 }
 
