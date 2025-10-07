@@ -5,8 +5,9 @@ import { prisma } from './services/database';
 import { logger } from './utils/logger';
 import Bull from 'bull';
 
-// Process performance collection jobs
-performanceQueue.process('collect-metrics', async (job: Bull.Job) => {
+// Process performance collection jobs with concurrency
+// Process up to 3 sites in parallel to reduce total test time
+performanceQueue.process('collect-metrics', 3, async (job: Bull.Job) => {
   const { siteId, deviceType, scheduledJobId, comprehensive } = job.data;
 
   logger.info(`[Worker] Processing job ${job.id}`, {
