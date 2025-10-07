@@ -38,9 +38,11 @@ export default function MultiSiteOverview({ sites, onSiteSelect, onEdit, onDelet
   // Real-time job status polling - only when jobs are active
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
+    let recheckTimeout: NodeJS.Timeout | null = null;
     let currentDelay = 10000; // Start with 10 seconds
     const MAX_DELAY = 60000; // Max 60 seconds
     const MIN_DELAY = 10000; // Min 10 seconds
+    const RECHECK_DELAY = 30000; // Check every 30 seconds if jobs have been queued
 
     const pollJobStatus = async () => {
       try {
@@ -71,16 +73,18 @@ export default function MultiSiteOverview({ sites, onSiteSelect, onEdit, onDelet
           })
         );
 
-        // If no active jobs, stop polling
+        // If no active jobs, schedule a recheck in 30 seconds
         if (!hasActiveJobs) {
           if (interval) {
             clearInterval(interval);
             interval = null;
           }
+          // Schedule a recheck to see if jobs have been queued
+          recheckTimeout = setTimeout(pollJobStatus, RECHECK_DELAY);
           return;
         }
 
-        // Reschedule with current delay if jobs are still active
+        // If jobs are active, poll frequently
         if (interval) {
           clearInterval(interval);
         }
@@ -95,11 +99,11 @@ export default function MultiSiteOverview({ sites, onSiteSelect, onEdit, onDelet
           console.error('Failed to fetch job status:', error);
         }
 
-        // Reschedule even on error
+        // Reschedule with backoff
         if (interval) {
           clearInterval(interval);
         }
-        interval = setInterval(pollJobStatus, currentDelay);
+        recheckTimeout = setTimeout(pollJobStatus, currentDelay);
       }
     };
 
@@ -108,6 +112,7 @@ export default function MultiSiteOverview({ sites, onSiteSelect, onEdit, onDelet
 
     return () => {
       if (interval) clearInterval(interval);
+      if (recheckTimeout) clearTimeout(recheckTimeout);
     };
   }, []);
 
