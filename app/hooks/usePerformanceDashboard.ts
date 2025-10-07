@@ -33,8 +33,9 @@ export function usePerformanceDashboard() {
     }
   }, [state.selectedSite]);
 
-  // Real-time job status polling
+  // Real-time job status polling - only when collecting
   useEffect(() => {
+    // Only poll when we have a selected site AND collection is in progress
     if (!state.selectedSite || !state.collecting) return;
 
     const pollJobStatus = async () => {
@@ -65,8 +66,8 @@ export function usePerformanceDashboard() {
     // This prevents race condition where we check status before job is queued
     const initialTimeout = setTimeout(pollJobStatus, 3000);
 
-    // Poll every 2 seconds while collecting
-    const interval = setInterval(pollJobStatus, 2000);
+    // Poll every 5 seconds while collecting (reduced from 2s to lower Redis load)
+    const interval = setInterval(pollJobStatus, 5000);
 
     return () => {
       clearTimeout(initialTimeout);

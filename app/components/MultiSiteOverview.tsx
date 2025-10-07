@@ -35,7 +35,7 @@ export default function MultiSiteOverview({ sites, onSiteSelect, onEdit, onDelet
     loadAllSiteData();
   }, [sites]);
 
-  // Real-time job status polling with rate limit handling
+  // Real-time job status polling - only when jobs are active
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     let currentDelay = 10000; // Start with 10 seconds
@@ -48,6 +48,9 @@ export default function MultiSiteOverview({ sites, onSiteSelect, onEdit, onDelet
 
         // Success - reset to normal polling interval
         currentDelay = MIN_DELAY;
+
+        // Check if any jobs are active
+        const hasActiveJobs = jobStatus.sites.some(s => s.status !== 'idle');
 
         // Update site data with job status information
         setSiteData(prevData =>
@@ -67,6 +70,21 @@ export default function MultiSiteOverview({ sites, onSiteSelect, onEdit, onDelet
             };
           })
         );
+
+        // If no active jobs, stop polling
+        if (!hasActiveJobs) {
+          if (interval) {
+            clearInterval(interval);
+            interval = null;
+          }
+          return;
+        }
+
+        // Reschedule with current delay if jobs are still active
+        if (interval) {
+          clearInterval(interval);
+        }
+        interval = setInterval(pollJobStatus, currentDelay);
       } catch (error: any) {
         // Check if it's a 429 rate limit error
         if (error?.message?.includes('429') || error?.message?.includes('Rate limit')) {
@@ -76,16 +94,16 @@ export default function MultiSiteOverview({ sites, onSiteSelect, onEdit, onDelet
         } else {
           console.error('Failed to fetch job status:', error);
         }
-      }
 
-      // Reschedule with current delay
-      if (interval) {
-        clearInterval(interval);
+        // Reschedule even on error
+        if (interval) {
+          clearInterval(interval);
+        }
+        interval = setInterval(pollJobStatus, currentDelay);
       }
-      interval = setInterval(pollJobStatus, currentDelay);
     };
 
-    // Initial poll
+    // Initial poll to check job status
     pollJobStatus();
 
     return () => {
